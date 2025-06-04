@@ -2,7 +2,7 @@ use std::mem;
 
 use crate::vec::Vec;
 
-pub const DEFAULT_DEGREE: usize = 1;
+pub const DEFAULT_DEGREE: usize = 100;
 
 #[derive(Clone, Debug)]
 pub struct BTree<T: Ord + Clone> {
@@ -183,6 +183,53 @@ mod test {
         }
 
         for d in &data {
+            assert!(tree.has(*d))
+        }
+    }
+
+    #[test]
+    fn test_insert_large() {
+        let mut tree = BTree::<u32>::new(DEFAULT_DEGREE);
+        let base_data = vec![19, 125, 25, 16, 2, 73, 384, 435, 12924, 42, 125251, 2548];
+        let mut data = base_data.clone();
+
+        // Create an even larger dataset to really stress test the iterative approach
+        for _ in 0..15 {
+            data.extend(data.clone());
+        }
+
+        println!("len of data: {}", data.len());
+
+        for d in &data {
+            tree.insert(*d)
+        }
+
+        // Verify a sample of the data
+        for d in &base_data {
+            assert!(tree.has(*d))
+        }
+    }
+
+    #[test]
+    fn test_insert_very_large() {
+        let mut tree = BTree::<u32>::new(DEFAULT_DEGREE);
+        let base_data = vec![19, 125, 25, 16, 2, 73, 384, 435, 12924, 42, 125251, 2548];
+        let mut data = base_data.clone();
+
+        // Create an even larger dataset to really stress test the iterative approach
+        for _ in 0..27 {
+            data.extend(data.clone());
+        }
+
+        // 5 GiB of this vector
+        println!("len of data: {}", data.len());
+
+        for d in &data {
+            tree.insert(*d)
+        }
+
+        // Verify a sample of the data
+        for d in &base_data {
             assert!(tree.has(*d))
         }
     }
