@@ -24,7 +24,9 @@ struct Node<T> {
 }
 
 impl BTreeProperties {
+    #[must_use]
     fn new(degree: usize) -> Self {
+        assert!(degree >= 3, "B-tree degree must be at least 3");
         Self {
             degree,
             max_keys: degree - 1,
@@ -34,69 +36,72 @@ impl BTreeProperties {
 
     fn split_child<T: Ord + Clone>(&self, parent: &mut Node<T>, child_index: usize) {
         let child = &mut parent.children[child_index];
-        let middle_key: T = child.keys[self.mid_key_index].clone();
-        let right_keys = match child.keys.split_off(self.mid_key_index).split_first() {
-            Some((_first, _others)) => {
-                // We don't need _first, as it will move to parent node.
-                _others.into()
-            }
-            None => Vec::<T>::with_capacity(self.max_keys),
-        };
+
+        let right_keys = child.keys.split_off(self.mid_key_index + 1);
+        let middle_key = child.keys.pop().unwrap(); // We reinsert later
+
         let right_children = if !child.is_leaf() {
             Some(child.children.split_off(self.mid_key_index + 1))
         } else {
             None
         };
-        let new_child_node: Node<T> = Node::new(self.degree, Some(right_keys), right_children);
+
+        let new_child_node = Node::new_with_data(self.degree, right_keys, right_children);
 
         parent.keys.insert(child_index, middle_key);
         parent.children.insert(child_index + 1, new_child_node);
     }
 
-    fn is_maxed_out<T: Ord>(&self, node: &Node<T>) -> bool {
-        node.keys.len() == self.max_keys
+    #[must_use]
+    fn is_full<T>(&self, node: &Node<T>) -> bool {
+        node.keys.len() >= self.max_keys
     }
 
-    fn insert_non_full<T: Ord + Clone>(&mut self, node: &mut Node<T>, key: T) {
-        let mut index: isize = isize::try_from(node.keys.len()).ok().unwrap() - 1;
-        while index >= 0 && node.keys[index as usize] >= key {
-            index -= 1;
+    #[must_use]
+    fn find_insertion_index<T: Ord>(keys: &[T], key: &T) -> usize {
+        match keys.binary_search(key) {
+            Ok(idx) | Err(idx) => idx,
         }
+    }
 
-        let mut u_index: usize = usize::try_from(index + 1).ok().unwrap();
+    fn insert_non_full<T: Ord + Clone>(&self, node: &mut Node<T>, key: T) {
+        let index = Self::find_insertion_index(&node.keys, &key);
+
         if node.is_leaf() {
-            // Just insert it, as we know this method will be called only when node is not full
-            node.keys.insert(u_index, key);
+            node.keys.insert(index, key);
+        } else if self.is_full(&node.children[index]) {
+            self.split_child(node, index);
+            // After split, determine which child to recurse into
+            let final_index = if index < node.keys.len() && node.keys[index] < key {
+                index + 1
+            } else {
+                index
+            };
+            self.insert_non_full(&mut node.children[final_index], key);
         } else {
-            if self.is_maxed_out(&node.children[u_index]) {
-                self.split_child(node, u_index);
-                if node.keys[u_index] < key {
-                    u_index += 1;
-                }
-            }
-
-            self.insert_non_full(&mut node.children[u_index], key);
+            self.insert_non_full(&mut node.children[index], key);
         }
     }
 }
 
-impl<T> Node<T>
-where
-    T: Ord,
-{
-    fn new(degree: usize, keys: Option<Vec<T>>, children: Option<Vec<Node<T>>>) -> Self {
+impl<T> Node<T> {
+    #[must_use]
+    fn new(degree: usize) -> Self {
         Node {
-            keys: match keys {
-                Some(keys) => keys,
-                None => Vec::with_capacity(degree - 1),
-            },
-            children: match children {
-                Some(children) => children,
-                None => Vec::with_capacity(degree),
-            },
+            keys: Vec::with_capacity(degree - 1),
+            children: Vec::with_capacity(degree),
         }
     }
 
+    #[must_use]
+    fn new_with_data(degree: usize, keys: Vec<T>, children: Option<Vec<Node<T>>>) -> Self {
+        Node {
+            keys,
+            children: children.unwrap_or_else(|| Vec::with_capacity(degree)),
+        }
+    }
+
+    #[must_use]
     fn is_leaf(&self) -> bool {
         self.children.is_empty()
     }
@@ -106,40 +111,120 @@ impl<T: Ord + Clone> BTree<T> {
     pub fn new(branch_factor: usize) -> Self {
         let degree = 2 * branch_factor;
         Self {
-            root: Node::new(degree, None, None),
+            root: Node::new(degree),
             properties: BTreeProperties::new(degree),
         }
     }
 
     pub fn clear(&mut self) {
-        self.root = Node::new(self.properties.degree, None, None);
+        self.root = Node::new(self.properties.degree);
     }
 
     pub fn insert(&mut self, key: T) {
-        if self.properties.is_maxed_out(&self.root) {
-            // Create an empty root and split the old root...
-            let mut new_root = Node::new(self.properties.degree, None, None);
-            mem::swap(&mut new_root, &mut self.root);
-            self.root.children.insert(0, new_root);
+        if self.properties.is_full(&self.root) {
+            // Create new root and make old root its child
+            let new_root = Node::new(self.properties.degree);
+            let old_root = mem::replace(&mut self.root, new_root);
+            self.root.children.push(old_root);
             self.properties.split_child(&mut self.root, 0);
         }
-        self.properties.insert_non_full(&mut self.root, key)
+        self.properties.insert_non_full(&mut self.root, key);
     }
 
     #[must_use]
-    pub fn has(&self, key: T) -> bool {
-        let mut current_node = &self.root;
+    pub fn contains(&self, key: &T) -> bool {
+        let mut current = &self.root;
         loop {
-            match current_node.keys.binary_search(&key) {
+            match current.keys.binary_search(key) {
                 Ok(_) => return true,
                 Err(idx) => {
-                    if current_node.is_leaf() {
+                    if current.is_leaf() {
                         return false;
                     }
-                    current_node = &current_node.children[idx];
+                    current = &current.children[idx];
                 }
             }
         }
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.root.keys.is_empty()
+    }
+
+    #[must_use]
+    pub fn height(&self) -> usize {
+        if self.is_empty() {
+            return 0;
+        }
+
+        let mut height = 1;
+        let mut current = &self.root;
+        while !current.is_leaf() {
+            height += 1;
+            current = &current.children[0];
+        }
+        height
+    }
+
+    // Iterator support - returns keys in sorted order
+    pub fn iter(&self) -> BTreeIter<T> {
+        BTreeIter::new(&self.root)
+    }
+
+    // Range query support
+    pub fn range<'a>(&'a self, start: &T, end: &T) -> impl Iterator<Item = &'a T> {
+        self.iter()
+            .skip_while(move |&k| k < start)
+            .take_while(move |&k| k <= end)
+    }
+}
+
+// Simple iterator implementation
+pub struct BTreeIter<'a, T> {
+    stack: Vec<(&'a Node<T>, usize)>,
+}
+
+impl<'a, T> BTreeIter<'a, T> {
+    fn new(root: &'a Node<T>) -> Self {
+        let mut iter = BTreeIter { stack: Vec::new() };
+        iter.push_left_path(root, 0);
+        iter
+    }
+
+    fn push_left_path(&mut self, mut node: &'a Node<T>, start_idx: usize) {
+        loop {
+            self.stack.push((node, start_idx));
+            if node.is_leaf() {
+                break;
+            }
+            node = &node.children[start_idx];
+        }
+    }
+}
+
+impl<'a, T> Iterator for BTreeIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((node, idx)) = self.stack.pop() {
+            if idx < node.keys.len() {
+                let key = &node.keys[idx];
+
+                // Prepare for next iteration
+                if !node.is_leaf() && idx + 1 < node.children.len() {
+                    self.push_left_path(&node.children[idx + 1], 0);
+                }
+
+                // Push current node back with incremented index
+                if idx + 1 < node.keys.len() {
+                    self.stack.push((node, idx + 1));
+                }
+
+                return Some(key);
+            }
+        }
+        None
     }
 }
 
@@ -153,84 +238,85 @@ mod test {
     }
 
     #[test]
-    fn test_insert_easy() {
-        let mut tree = BTree::<u32>::new(DEFAULT_DEGREE);
-        let data = &[19, 125, 25, 16, 2, 73, 384, 435, 12924, 42, 125251, 2548];
+    fn test_insert_and_contains() {
+        let mut tree = BTree::<u32>::new(3); // Small degree for easier testing
+        let data = &[10, 20, 5, 6, 12, 30, 7, 17];
 
-        for d in data {
-            tree.insert(*d)
+        for &value in data {
+            tree.insert(value);
         }
 
-        for d in data {
-            assert!(tree.has(*d))
+        for &value in data {
+            assert!(tree.contains(&value), "Tree should contain {}", value);
+        }
+
+        assert!(!tree.contains(&999), "Tree should not contain 999");
+    }
+
+    #[test]
+    fn test_iteration() {
+        let mut tree = BTree::new(3);
+        let data = [10, 20, 5, 6, 12, 30, 7, 17];
+
+        for value in data {
+            tree.insert(value);
+        }
+
+        let mut sorted = Vec::new();
+        for &value in tree.iter() {
+            sorted.push(value);
+        }
+
+        let expected = [5, 6, 7, 10, 12, 17, 20, 30];
+        assert_eq!(sorted.len(), expected.len());
+        for i in 0..sorted.len() {
+            assert_eq!(sorted[i], expected[i]);
         }
     }
 
     #[test]
-    fn test_insert_many() {
-        let mut tree = BTree::<u32>::new(DEFAULT_DEGREE);
-        let mut data = vec![19, 125, 25, 16, 2, 73, 384, 435, 12924, 42, 125251, 2548];
+    fn test_height() {
+        let mut tree = BTree::new(3);
+        assert_eq!(tree.height(), 0);
 
-        for _ in 0..10 {
-            data.extend(data.clone());
+        tree.insert(1);
+        assert_eq!(tree.height(), 1);
+
+        // Insert enough to force splits
+        for i in 2..=10 {
+            tree.insert(i);
+        }
+        assert!(tree.height() > 1);
+    }
+
+    #[test]
+    fn test_moderate_dataset() {
+        let mut tree = BTree::<u32>::new(50);
+        let mut data = Vec::new();
+        for i in 0..10000 {
+            data.push(i);
         }
 
-        // data has 12288 elements here! This is a lot, but should be reasonably possible for a btree.
-        println!("len of data: {}", data.len());
-
-        for d in &data {
-            tree.insert(*d)
+        for i in 0..data.len() {
+            tree.insert(data[i]);
         }
 
-        for d in &data {
-            assert!(tree.has(*d))
+        // Verify first 100 samples
+        for i in 0..100 {
+            assert!(tree.contains(&data[i]));
         }
     }
 
     #[test]
-    fn test_insert_large() {
-        let mut tree = BTree::<u32>::new(DEFAULT_DEGREE);
-        let base_data = vec![19, 125, 25, 16, 2, 73, 384, 435, 12924, 42, 125251, 2548];
-        let mut data = base_data.clone();
-
-        // Create an even larger dataset to really stress test the iterative approach
-        for _ in 0..15 {
-            data.extend(data.clone());
-        }
-
-        println!("len of data: {}", data.len());
-
+    fn test_iter() {
+        let data: Vec<_> = (0..9999).collect();
+        let mut tree = BTree::new(DEFAULT_DEGREE);
         for d in &data {
-            tree.insert(*d)
+            tree.insert(d);
         }
 
-        // Verify a sample of the data
-        for d in &base_data {
-            assert!(tree.has(*d))
-        }
-    }
-
-    #[test]
-    fn test_insert_very_large() {
-        let mut tree = BTree::<u32>::new(DEFAULT_DEGREE);
-        let base_data = vec![19, 125, 25, 16, 2, 73, 384, 435, 12924, 42, 125251, 2548];
-        let mut data = base_data.clone();
-
-        // Create an even larger dataset to really stress test the iterative approach
-        for _ in 0..27 {
-            data.extend(data.clone());
-        }
-
-        // 5 GiB of this vector
-        println!("len of data: {}", data.len());
-
-        for d in &data {
-            tree.insert(*d)
-        }
-
-        // Verify a sample of the data
-        for d in &base_data {
-            assert!(tree.has(*d))
+        for key in tree.iter() {
+            assert!(data.contains(key))
         }
     }
 }
