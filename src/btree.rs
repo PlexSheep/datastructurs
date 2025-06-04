@@ -15,6 +15,7 @@ pub struct BTreeProperties {
     degree: usize,
     max_keys: usize,
     mid_key_index: usize,
+    len: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -31,6 +32,7 @@ impl BTreeProperties {
             degree,
             max_keys: degree - 1,
             mid_key_index: (degree - 1) / 2,
+            len: 0,
         }
     }
 
@@ -118,6 +120,7 @@ impl<T: Ord + Clone> BTree<T> {
 
     pub fn clear(&mut self) {
         self.root = Node::new(self.properties.degree);
+        self.properties.len = 0;
     }
 
     pub fn insert(&mut self, key: T) {
@@ -129,6 +132,7 @@ impl<T: Ord + Clone> BTree<T> {
             self.properties.split_child(&mut self.root, 0);
         }
         self.properties.insert_non_full(&mut self.root, key);
+        self.properties.len += 1;
     }
 
     #[must_use]
@@ -177,6 +181,11 @@ impl<T: Ord + Clone> BTree<T> {
         self.iter()
             .skip_while(move |&k| k < start)
             .take_while(move |&k| k <= end)
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.properties.len
     }
 }
 
@@ -317,6 +326,21 @@ mod test {
 
         for key in tree.iter() {
             assert!(data.contains(key))
+        }
+    }
+
+    #[test]
+    fn test_stress() {
+        let mut tree = BTree::new(DEFAULT_DEGREE);
+        let range = 0..5_000_000;
+        for d in range.clone() {
+            tree.insert(d);
+        }
+        println!("Tree height: {}", tree.height());
+        println!("Tree len: {}", tree.len());
+
+        for key in range {
+            assert!(tree.contains(&key))
         }
     }
 }
