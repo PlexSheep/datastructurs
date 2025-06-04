@@ -24,6 +24,9 @@ struct Node<T> {
     children: Vec<Node<T>>,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum BTreeError {}
+
 impl BTreeProperties {
     #[must_use]
     fn new(degree: usize) -> Self {
@@ -187,6 +190,57 @@ impl<T: Ord + Clone> BTree<T> {
     pub fn len(&self) -> usize {
         self.properties.len
     }
+
+    #[must_use]
+    pub fn first(&self) -> Option<&T> {
+        todo!()
+    }
+
+    #[must_use]
+    pub fn last(&self) -> Option<&T> {
+        todo!()
+    }
+
+    pub fn pop_first(&mut self) -> Option<T> {
+        todo!()
+    }
+
+    pub fn pop_last(&mut self) -> Option<T> {
+        todo!()
+    }
+
+    pub fn remove(&mut self, key: &T) -> Option<&T> {
+        todo!()
+    }
+
+    #[must_use]
+    pub fn depth(&self) -> usize {
+        todo!()
+    }
+
+    #[must_use]
+    pub fn node_count(&self) -> usize {
+        todo!()
+    }
+
+    #[must_use]
+    pub fn memory_usage(&self) -> usize {
+        todo!()
+    }
+
+    #[must_use]
+    pub fn load_factor(&self) -> f64 {
+        todo!()
+    }
+
+    pub fn validate(&self) -> Result<(), BTreeError> {
+        todo!()
+    }
+
+    #[must_use]
+    pub fn representation_structure(&self) -> String {
+        todo!()
+    }
 }
 
 // Simple iterator implementation
@@ -247,7 +301,7 @@ mod test {
     }
 
     #[test]
-    fn test_insert_and_contains() {
+    fn test_insert_contains_remove() {
         let mut tree = BTree::<u32>::new(3); // Small degree for easier testing
         let data = &[10, 20, 5, 6, 12, 30, 7, 17];
 
@@ -260,6 +314,12 @@ mod test {
         }
 
         assert!(!tree.contains(&999), "Tree should not contain 999");
+
+        for &value in data {
+            tree.remove(&value);
+        }
+
+        assert!(tree.is_empty())
     }
 
     #[test]
@@ -339,8 +399,13 @@ mod test {
         println!("Tree height: {}", tree.height());
         println!("Tree len: {}", tree.len());
 
-        for key in range {
+        for key in range.clone() {
             assert!(tree.contains(&key))
         }
+
+        for key in range.into_iter().rev() {
+            assert_eq!(tree.pop_last().unwrap(), key)
+        }
+        assert!(tree.is_empty())
     }
 }
