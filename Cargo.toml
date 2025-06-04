@@ -1,15 +1,15 @@
 [package]
-name = "base"
+name = "datastructurs"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 publish = false
 authors = ["Christoph J. Scherr <software@cscherr.de>"]
 license = "GPL-3.0-or-later"
-description = "No description yet"
+description = "Collection of datastructures implemented in rust with minimal dependencies"
 readme = "README.md"
-homepage = "https://github.com/PlexSheep/rs-base"
-repository = "https://github.com/PlexSheep/rs-base"
-keywords = ["template"]
+homepage = "https://github.com/PlexSheep/datastructurs"
+repository = "https://github.com/PlexSheep/datastructurs"
+keywords = ["datastructures"]
 
 
 [dependencies]
