@@ -195,6 +195,101 @@ impl<T> From<&[T]> for Vec<T> {
     }
 }
 
+impl<T: PartialEq> PartialEq for Vec<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+        for i in 0..self.len() {
+            if self[i] != other[i] {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl<T: Eq> Eq for Vec<T> {}
+
+pub struct VecIntoIter<T> {
+    vec: Vec<T>,
+    index: usize,
+}
+
+impl<T> Iterator for VecIntoIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.vec.len() {
+            let item = unsafe { std::ptr::read(self.vec.as_ptr().add(self.index)) };
+            self.index += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct VecRefIter<'a, T> {
+    vec: &'a Vec<T>,
+    index: usize,
+}
+
+impl<'a, T> Iterator for VecRefIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.vec.len() {
+            let item = &self.vec[self.index];
+            self.index += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+}
+
+impl<T> IntoIterator for Vec<T> {
+    type Item = T;
+    type IntoIter = VecIntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        VecIntoIter {
+            vec: self,
+            index: 0,
+        }
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Vec<T> {
+    type Item = &'a T;
+    type IntoIter = VecRefIter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        VecRefIter {
+            vec: self,
+            index: 0,
+        }
+    }
+}
+
+impl<T> FromIterator<T> for Vec<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut vec = Vec::new();
+        for item in iter {
+            vec.push(item);
+        }
+        vec
+    }
+}
+
+impl<T> Extend<T> for Vec<T> {
+    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        for item in iter {
+            self.push(item);
+        }
+    }
+}
 unsafe impl<T: Send> Send for Vec<T> {}
 unsafe impl<T: Sync> Sync for Vec<T> {}
 
