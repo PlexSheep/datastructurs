@@ -7,8 +7,6 @@ fn main() {
         assert!(tree.contains(&i));
     }
 
-    println!("Approx. Memory Usage: {}", tree.memory_usage());
-
     for i in &[12, 43_312, 24_032, 12_000, 12_001, 12_002] {
         tree.remove(i);
         assert!(!tree.contains(i));

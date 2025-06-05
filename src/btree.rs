@@ -34,11 +34,6 @@ impl<T: Ord> Node<T> {
         unsafe { NodePtr::new_unchecked(Box::into_raw(Box::new(self))) }
     }
 
-    fn as_ptr_mut(&mut self) -> NodePtr<T> {
-        let a: *mut Self = self;
-        unsafe { NodePtr::new_unchecked(a) }
-    }
-
     fn as_ptr(&self) -> NodePtr<T> {
         let a: *const Self = self;
         unsafe { NodePtr::new_unchecked(a as *mut Self) }
@@ -266,38 +261,6 @@ impl<T: Ord + Clone> BTree<T> {
                 current = deref_node_ref(&current.children[0])
             }
         }
-    }
-
-    /// Approximate memory usage
-    #[must_use]
-    pub fn memory_usage(&self) -> usize {
-        let mut total = 0;
-        total += mem::size_of::<Self>();
-
-        let root = deref_node_ref(&self.root);
-        total += Self::memory_usage_of_node(root.as_ptr());
-        for child_ptr in &root.children {
-            total += Self::memory_usage_of_node(*child_ptr);
-        }
-
-        total
-    }
-
-    fn memory_usage_of_node(node_ptr: NodePtr<T>) -> usize {
-        let node = deref_node_ref(&node_ptr);
-        let mut total = mem::size_of_val(node);
-        for key in &node.keys {
-            total += mem::size_of_val(key);
-        }
-        for child_ptr in &node.children {
-            total += Self::memory_usage_of_node(*child_ptr);
-        }
-        total
-    }
-
-    #[must_use]
-    pub fn load_factor(&self) -> f64 {
-        todo!()
     }
 
     #[must_use]
@@ -597,7 +560,7 @@ impl<'a, T: Ord> BTreeIter<'a, T> {
     fn push_left_path(&mut self, node_ptr: &'a NodePtr<T>, start_idx: usize) {
         let mut node = deref_node_mut(node_ptr);
         loop {
-            self.stack.push((node.as_ptr_mut(), start_idx));
+            self.stack.push((node.as_ptr(), start_idx));
             if node.is_leaf() {
                 break;
             }
@@ -835,22 +798,5 @@ mod test {
         assert_eq!(tree.depth(), 2);
         assert_eq!(tree.node_count(), 5);
         assert!(tree.contains(&19));
-    }
-
-    #[test]
-    fn test_btree_memory_usage() {
-        let mut tree = BTree::<u32>::new(DEFAULT_BRANCH_FACTOR);
-
-        for i in 0..50_000 {
-            tree.insert(i);
-        }
-
-        assert_eq!(tree.len(), 50_000);
-
-        for i in 0..50_000 {
-            assert!(tree.contains(&i))
-        }
-
-        assert!(tree.memory_usage() >= 50_000 * mem::size_of::<u32>())
     }
 }
