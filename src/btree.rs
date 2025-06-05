@@ -42,14 +42,6 @@ impl<T: Ord> Node<T> {
         unsafe { NodePtr::new_unchecked(a) }
     }
 
-    fn child_ptr(&self, idx: usize) -> NodePtr<T> {
-        self.children[idx]
-    }
-
-    fn parent_ptr(&self) -> OpNodePtr<T> {
-        self.parent
-    }
-
     fn drop(node_ptr: NodePtr<T>) {
         unsafe { drop(Box::from_raw(node_ptr.as_ptr())) }
     }
@@ -270,7 +262,6 @@ impl<T: Ord + Clone> BTree<T> {
     }
 
     // Range query support
-    #[must_use]
     pub fn range<'a>(&'a self, start: &T, end: &T) -> impl Iterator<Item = &'a T> {
         self.iter()
             .skip_while(move |&k| k < start)
@@ -350,6 +341,12 @@ impl<'a, T: Ord + 'a> Iterator for BTreeIter<'a, T> {
 #[must_use]
 fn deref_node<'a, T: Ord + 'a>(p: NodePtr<T>) -> &'a Node<T> {
     unsafe { &*p.as_ptr() }
+}
+
+#[inline]
+#[must_use]
+fn deref_node_box<'a, T: Ord + 'a>(p: NodePtr<T>) -> Box<Node<T>> {
+    unsafe { Box::from_raw(p.as_ptr()) }
 }
 
 #[inline]
@@ -512,5 +509,22 @@ mod test {
             assert_eq!(tree.pop_last().unwrap(), key)
         }
         assert!(tree.is_empty())
+    }
+
+    #[test]
+    fn test_btree_simple_remove() {
+        let mut tree = BTree::new(2); // degree=4, min_keys=2
+
+        for i in 1..=7 {
+            tree.insert(i);
+        }
+
+        tree.remove(&1); // node underflow
+
+        assert!(!tree.contains(&1));
+        for i in 2..=7 {
+            assert!(tree.contains(&i))
+        }
+        assert_eq!(tree.len(), 6);
     }
 }
