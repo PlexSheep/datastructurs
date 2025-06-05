@@ -114,7 +114,7 @@ impl<T> Vec<T> {
 
     pub fn remove(&mut self, index: usize) -> Option<T> {
         // Note: `<` because it's *not* valid to remove after everything
-        if index < self.used {
+        if index >= self.used {
             return None;
         }
         unsafe {
