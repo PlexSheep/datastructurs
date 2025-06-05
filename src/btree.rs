@@ -1,31 +1,59 @@
-use std::mem;
+use std::{marker::PhantomData, mem, ptr::NonNull};
 
 use crate::vec::Vec;
 
 pub const DEFAULT_DEGREE: usize = 100;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Node<T: Ord> {
+    keys: Vec<T>,
+    parent: Option<NodePtr<T>>,
+    children: Vec<NodePtr<T>>,
+}
+
+type NodePtr<T> = NonNull<Node<T>>;
+type OpNodePtr<T> = Option<NodePtr<T>>;
+
 #[derive(Clone, Debug)]
-pub struct BTree<T: Ord + Clone> {
-    root: Node<T>,
-    properties: BTreeProperties,
+pub struct BTree<T: Ord> {
+    root: NodePtr<T>,
+    props: BTreeProperties,
 }
 
 #[derive(Clone, Debug, Copy)]
 pub struct BTreeProperties {
     degree: usize,
     max_keys: usize,
+    min_keys: usize,
     mid_key_index: usize,
     len: usize,
 }
 
-#[derive(Clone, Debug)]
-struct Node<T> {
-    keys: Vec<T>,
-    children: Vec<Node<T>>,
-}
-
 #[derive(Clone, Copy, Debug)]
 pub enum BTreeError {}
+
+impl<T: Ord> Node<T> {
+    fn store_on_heap(self) -> NodePtr<T> {
+        unsafe { NodePtr::new_unchecked(Box::into_raw(Box::new(self))) }
+    }
+
+    fn as_ptr(&mut self) -> NodePtr<T> {
+        let a: *mut Self = self;
+        unsafe { NodePtr::new_unchecked(a) }
+    }
+
+    fn child_ptr(&self, idx: usize) -> NodePtr<T> {
+        self.children[idx]
+    }
+
+    fn parent_ptr(&self) -> OpNodePtr<T> {
+        self.parent
+    }
+
+    fn drop(node_ptr: NodePtr<T>) {
+        unsafe { drop(Box::from_raw(node_ptr.as_ptr())) }
+    }
+}
 
 impl BTreeProperties {
     #[must_use]
@@ -40,8 +68,9 @@ impl BTreeProperties {
         }
     }
 
-    fn split_child<T: Ord + Clone>(&self, parent: &mut Node<T>, child_index: usize) {
-        let child = &mut parent.children[child_index];
+    fn split_child<T: Ord + Clone>(&self, parent_ptr: NodePtr<T>, child_index: usize) {
+        let parent = deref_node_mut(&parent_ptr);
+        let child = deref_node_mut(&parent.children[child_index]);
 
         let right_keys = child.keys.split_off(self.mid_key_index + 1);
         let middle_key = child.keys.pop().unwrap(); // We reinsert later
@@ -52,15 +81,17 @@ impl BTreeProperties {
             None
         };
 
-        let new_child_node = Node::new_with_data(self.degree, right_keys, right_children);
+        let new_child_node =
+            Node::new_with_data(self.degree, right_keys, right_children, Some(parent_ptr))
+                .store_on_heap();
 
         parent.keys.insert(child_index, middle_key);
         parent.children.insert(child_index + 1, new_child_node);
     }
 
     #[must_use]
-    fn is_full<T>(&self, node: &Node<T>) -> bool {
-        node.keys.len() >= self.max_keys
+    fn is_full<T: Ord>(&self, node: &NodePtr<T>) -> bool {
+        deref_node_ref(node).keys.len() >= self.max_keys
     }
 
     #[must_use]
@@ -70,39 +101,47 @@ impl BTreeProperties {
         }
     }
 
-    fn insert_non_full<T: Ord + Clone>(&self, node: &mut Node<T>, key: T) {
+    fn insert_non_full<T: Ord + Clone>(&self, node_ptr: NodePtr<T>, key: T) {
+        let node = deref_node_mut(&node_ptr);
         let index = Self::find_insertion_index(&node.keys, &key);
 
         if node.is_leaf() {
             node.keys.insert(index, key);
         } else if self.is_full(&node.children[index]) {
-            self.split_child(node, index);
+            self.split_child(node_ptr, index);
             // After split, determine which child to recurse into
             let final_index = if index < node.keys.len() && node.keys[index] < key {
                 index + 1
             } else {
                 index
             };
-            self.insert_non_full(&mut node.children[final_index], key);
+            self.insert_non_full(node.children[final_index], key);
         } else {
-            self.insert_non_full(&mut node.children[index], key);
+            self.insert_non_full(node.children[index], key);
         }
     }
 }
 
-impl<T> Node<T> {
+impl<T: Ord> Node<T> {
     #[must_use]
-    fn new(degree: usize) -> Self {
+    fn new(degree: usize, parent: OpNodePtr<T>) -> Self {
         Node {
             keys: Vec::with_capacity(degree - 1),
+            parent,
             children: Vec::with_capacity(degree),
         }
     }
 
     #[must_use]
-    fn new_with_data(degree: usize, keys: Vec<T>, children: Option<Vec<Node<T>>>) -> Self {
-        Node {
+    fn new_with_data(
+        degree: usize,
+        keys: Vec<T>,
+        children: Option<Vec<NodePtr<T>>>,
+        parent: OpNodePtr<T>,
+    ) -> Self {
+        Self {
             keys,
+            parent,
             children: children.unwrap_or_else(|| Vec::with_capacity(degree)),
         }
     }
@@ -117,31 +156,33 @@ impl<T: Ord + Clone> BTree<T> {
     pub fn new(branch_factor: usize) -> Self {
         let degree = 2 * branch_factor;
         Self {
-            root: Node::new(degree),
-            properties: BTreeProperties::new(degree),
+            root: Node::new(degree, None).store_on_heap(),
+            props: BTreeProperties::new(degree),
         }
     }
 
     pub fn clear(&mut self) {
-        self.root = Node::new(self.properties.degree);
-        self.properties.len = 0;
+        Node::drop(self.root);
+        *self = Self::new(self.props.degree * 2)
     }
 
     pub fn insert(&mut self, key: T) {
-        if self.properties.is_full(&self.root) {
+        if self.props.is_full(&self.root) {
             // Create new root and make old root its child
-            let new_root = Node::new(self.properties.degree);
-            let old_root = mem::replace(&mut self.root, new_root);
-            self.root.children.push(old_root);
-            self.properties.split_child(&mut self.root, 0);
+            let new_root = Node::new(self.props.degree, None);
+            let old_root = mem::replace(deref_node_mut(&self.root), new_root);
+            deref_node_mut(&self.root)
+                .children
+                .push(old_root.store_on_heap());
+            self.props.split_child(self.root, 0);
         }
-        self.properties.insert_non_full(&mut self.root, key);
-        self.properties.len += 1;
+        self.props.insert_non_full(self.root, key);
+        self.props.len += 1;
     }
 
     #[must_use]
     pub fn contains(&self, key: &T) -> bool {
-        let mut current = &self.root;
+        let mut current = deref_node_ref(&self.root);
         loop {
             match current.keys.binary_search(key) {
                 Ok(_) => return true,
@@ -149,7 +190,7 @@ impl<T: Ord + Clone> BTree<T> {
                     if current.is_leaf() {
                         return false;
                     }
-                    current = &current.children[idx];
+                    current = deref_node_ref(&current.children[idx]);
                 }
             }
         }
@@ -157,7 +198,7 @@ impl<T: Ord + Clone> BTree<T> {
 
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.root.keys.is_empty()
+        deref_node_ref(&self.root).keys.is_empty()
     }
 
     #[must_use]
@@ -167,29 +208,17 @@ impl<T: Ord + Clone> BTree<T> {
         }
 
         let mut height = 1;
-        let mut current = &self.root;
+        let mut current = deref_node_ref(&self.root);
         while !current.is_leaf() {
             height += 1;
-            current = &current.children[0];
+            current = deref_node_ref(&current.children[0]);
         }
         height
     }
 
-    // Iterator support - returns keys in sorted order
-    pub fn iter(&self) -> BTreeIter<T> {
-        BTreeIter::new(&self.root)
-    }
-
-    // Range query support
-    pub fn range<'a>(&'a self, start: &T, end: &T) -> impl Iterator<Item = &'a T> {
-        self.iter()
-            .skip_while(move |&k| k < start)
-            .take_while(move |&k| k <= end)
-    }
-
     #[must_use]
     pub fn len(&self) -> usize {
-        self.properties.len
+        self.props.len
     }
 
     #[must_use]
@@ -211,36 +240,7 @@ impl<T: Ord + Clone> BTree<T> {
     }
 
     pub fn remove(&mut self, key: &T) -> Option<T> {
-        let mut previous: Option<Node<T>> = None;
-        let mut current = &mut self.root;
-        let mut node_idx = 0;
-        loop {
-            match current.keys.binary_search(key) {
-                Ok(idx) => {
-                    if current.is_leaf() {
-                        let removed = current.keys.remove(idx);
-                        if let Some(parent) = previous {
-                            if current.keys.len() < self.properties.min_keys {
-                                todo!("removed from non-root leaf")
-                                // self.rebalance(current);
-                            }
-                        }
-                        return Some(removed);
-                    } else {
-                        todo!("removed from non-leaf")
-                    }
-                }
-                Err(idx) => {
-                    if current.is_leaf() {
-                        return None;
-                    } else {
-                        previous = Some(current.clone());
-                        current = &mut current.children[idx];
-                        node_idx = idx;
-                    }
-                }
-            }
-        }
+        todo!("remove")
     }
 
     #[must_use]
@@ -263,48 +263,69 @@ impl<T: Ord + Clone> BTree<T> {
         todo!()
     }
 
-    pub fn validate(&self) -> Result<(), BTreeError> {
-        todo!()
-    }
-
+    // Iterator support - returns keys in sorted order
     #[must_use]
-    pub fn representation_structure(&self) -> String {
-        todo!()
+    pub fn iter(&self) -> BTreeIter<T> {
+        BTreeIter::new(&self.root)
     }
 
-    fn rebalance(&mut self, node: &mut Node<T>) {
-        todo!()
+    // Range query support
+    #[must_use]
+    pub fn range<'a>(&'a self, start: &T, end: &T) -> impl Iterator<Item = &'a T> {
+        self.iter()
+            .skip_while(move |&k| k < start)
+            .take_while(move |&k| k <= end)
     }
 }
 
-// Simple iterator implementation
-pub struct BTreeIter<'a, T> {
-    stack: Vec<(&'a Node<T>, usize)>,
-}
-
-impl<'a, T> BTreeIter<'a, T> {
-    fn new(root: &'a Node<T>) -> Self {
-        let mut iter = BTreeIter { stack: Vec::new() };
-        iter.push_left_path(root, 0);
-        iter
-    }
-
-    fn push_left_path(&mut self, mut node: &'a Node<T>, start_idx: usize) {
-        loop {
-            self.stack.push((node, start_idx));
-            if node.is_leaf() {
-                break;
-            }
-            node = &node.children[start_idx];
+impl<T: Ord> Drop for Node<T> {
+    fn drop(&mut self) {
+        for child_ptr in &self.children {
+            Node::drop(*child_ptr);
         }
     }
 }
 
-impl<'a, T> Iterator for BTreeIter<'a, T> {
+impl<T: Ord> Drop for BTree<T> {
+    fn drop(&mut self) {
+        Node::drop(self.root);
+    }
+}
+
+// Simple iterator implementation
+pub struct BTreeIter<'a, T: Ord> {
+    stack: Vec<(NodePtr<T>, usize)>,
+    marker: PhantomData<&'a ()>,
+}
+
+impl<'a, T: Ord> BTreeIter<'a, T> {
+    fn new(root_ptr: &'a NodePtr<T>) -> Self {
+        let mut iter = BTreeIter {
+            stack: Vec::new(),
+            marker: PhantomData,
+        };
+        iter.push_left_path(root_ptr, 0);
+        iter
+    }
+
+    fn push_left_path(&mut self, node_ptr: &'a NodePtr<T>, start_idx: usize) {
+        let mut node = deref_node_mut(node_ptr);
+        loop {
+            self.stack.push((node.as_ptr(), start_idx));
+            if node.is_leaf() {
+                break;
+            }
+            node = deref_node_mut(&node.children[start_idx]);
+        }
+    }
+}
+
+impl<'a, T: Ord + 'a> Iterator for BTreeIter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some((node, idx)) = self.stack.pop() {
+        while let Some((node_ptr, idx)) = self.stack.pop() {
+            let node = deref_node(node_ptr);
             if idx < node.keys.len() {
                 let key = &node.keys[idx];
 
@@ -315,7 +336,7 @@ impl<'a, T> Iterator for BTreeIter<'a, T> {
 
                 // Push current node back with incremented index
                 if idx + 1 < node.keys.len() {
-                    self.stack.push((node, idx + 1));
+                    self.stack.push((node_ptr, idx + 1));
                 }
 
                 return Some(key);
@@ -323,6 +344,25 @@ impl<'a, T> Iterator for BTreeIter<'a, T> {
         }
         None
     }
+}
+
+#[inline]
+#[must_use]
+fn deref_node<'a, T: Ord + 'a>(p: NodePtr<T>) -> &'a Node<T> {
+    unsafe { &*p.as_ptr() }
+}
+
+#[inline]
+#[must_use]
+fn deref_node_ref<T: Ord>(p: &NodePtr<T>) -> &Node<T> {
+    unsafe { &*p.as_ptr() }
+}
+
+#[inline]
+#[must_use]
+#[allow(clippy::mut_from_ref)]
+fn deref_node_mut<T: Ord>(p: &NodePtr<T>) -> &mut Node<T> {
+    unsafe { &mut *p.as_ptr() }
 }
 
 #[cfg(test)]

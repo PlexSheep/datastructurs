@@ -15,5 +15,9 @@ fn main() {
     for i in 0..50_000 {
         tree.remove(&i);
     }
+
+    assert!(tree.is_empty());
+
+    tree.clear();
     assert!(tree.is_empty())
 }
