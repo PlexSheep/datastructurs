@@ -56,6 +56,10 @@ impl<T> Vec<T> {
         v
     }
 
+    pub fn clear(&mut self) {
+        *self = Self::new();
+    }
+
     pub fn pop(&mut self) -> Option<T> {
         if self.used == 0 {
             None
