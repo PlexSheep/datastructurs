@@ -297,12 +297,12 @@ unsafe impl<T: Sync> Sync for Vec<T> {}
 mod test {
     use super::*;
     #[test]
-    fn test_create() {
+    fn test_vec_create() {
         let _v = Vec::<u64>::new();
     }
 
     #[test]
-    fn test_pushpop_num() {
+    fn test_vec_pushpop_num() {
         let mut v = Vec::new();
         let vals = &[19, 9, 14, 255, 19191919, 13890, 21521, 1251, 6216, 1830];
 
@@ -315,7 +315,7 @@ mod test {
     }
 
     #[test]
-    fn test_pushpop_str() {
+    fn test_vec_pushpop_str() {
         let mut v = Vec::new();
         let vals = &["AAAA", "ABBAB", "BBABBABBAJJJ"];
 
@@ -328,7 +328,7 @@ mod test {
     }
 
     #[test]
-    fn test_pushindex_num() {
+    fn test_vec_pushindex_num() {
         let mut v = Vec::new();
         let vals = &[19, 9, 14, 255, 19191919, 13890, 21521, 1251, 6216, 1830];
 
@@ -341,7 +341,7 @@ mod test {
     }
 
     #[test]
-    fn test_pushindex_str() {
+    fn test_vec_pushindex_str() {
         let mut v = Vec::new();
         let vals = &["AAAA", "ABBAB", "BBABBABBAJJJ"];
 

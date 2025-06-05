@@ -57,6 +57,8 @@ impl<T> RawVec<T> {
 
 impl<T> Drop for RawVec<T> {
     fn drop(&mut self) {
+        // NOTE: We need to free the allocated memory here,
+        // otherwise there definitely is a memory leak.
         if self.capacity != 0 {
             let layout = Layout::array::<T>(self.capacity).unwrap();
             unsafe {
@@ -68,3 +70,21 @@ impl<T> Drop for RawVec<T> {
 
 unsafe impl<T: Send> Send for RawVec<T> {}
 unsafe impl<T: Sync> Sync for RawVec<T> {}
+
+#[cfg(test)]
+mod test {
+    use std::ptr;
+
+    use super::RawVec;
+
+    #[test]
+    fn test_rawvec_alloc_dealloc() {
+        let s = 2_000;
+        let mut v = RawVec::<u32>::new();
+        v.grow_by(s);
+        unsafe {
+            ptr::write_bytes(v.ptr.as_ptr(), b'A', s);
+        }
+        drop(v)
+    }
+}
