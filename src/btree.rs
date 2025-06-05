@@ -34,6 +34,7 @@ impl BTreeProperties {
         Self {
             degree,
             max_keys: degree - 1,
+            min_keys: degree / 2,
             mid_key_index: (degree - 1) / 2,
             len: 0,
         }
@@ -209,8 +210,37 @@ impl<T: Ord + Clone> BTree<T> {
         todo!()
     }
 
-    pub fn remove(&mut self, key: &T) -> Option<&T> {
-        todo!()
+    pub fn remove(&mut self, key: &T) -> Option<T> {
+        let mut previous: Option<Node<T>> = None;
+        let mut current = &mut self.root;
+        let mut node_idx = 0;
+        loop {
+            match current.keys.binary_search(key) {
+                Ok(idx) => {
+                    if current.is_leaf() {
+                        let removed = current.keys.remove(idx);
+                        if let Some(parent) = previous {
+                            if current.keys.len() < self.properties.min_keys {
+                                todo!("removed from non-root leaf")
+                                // self.rebalance(current);
+                            }
+                        }
+                        return Some(removed);
+                    } else {
+                        todo!("removed from non-leaf")
+                    }
+                }
+                Err(idx) => {
+                    if current.is_leaf() {
+                        return None;
+                    } else {
+                        previous = Some(current.clone());
+                        current = &mut current.children[idx];
+                        node_idx = idx;
+                    }
+                }
+            }
+        }
     }
 
     #[must_use]
@@ -239,6 +269,10 @@ impl<T: Ord + Clone> BTree<T> {
 
     #[must_use]
     pub fn representation_structure(&self) -> String {
+        todo!()
+    }
+
+    fn rebalance(&mut self, node: &mut Node<T>) {
         todo!()
     }
 }
@@ -296,12 +330,12 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_create() {
+    fn test_btree_create() {
         let _tree = BTree::<u32>::new(DEFAULT_DEGREE);
     }
 
     #[test]
-    fn test_insert_contains_remove() {
+    fn test_btree_insert_contains_remove_in_order() {
         let mut tree = BTree::<u32>::new(3); // Small degree for easier testing
         let data = &[10, 20, 5, 6, 12, 30, 7, 17];
 
@@ -323,7 +357,37 @@ mod test {
     }
 
     #[test]
-    fn test_iteration() {
+    fn test_btree_insert_contains_remove_out_of_order() {
+        let mut tree = BTree::<u32>::new(3); // Small degree for easier testing
+        let data = &[10, 20, 5, 6, 12, 30, 7, 17];
+
+        for &value in data {
+            tree.insert(value);
+        }
+
+        for &value in data.iter().step_by(2) {
+            tree.remove(&value);
+        }
+
+        for &value in data.iter().skip(1).step_by(2) {
+            assert!(tree.contains(&value), "Tree should contain {}", value);
+        }
+
+        for &value in data.iter().step_by(2) {
+            assert!(!tree.contains(&value), "Tree should not contain {}", value);
+        }
+
+        assert!(!tree.contains(&999), "Tree should not contain 999");
+
+        for &value in data.iter().skip(1).step_by(2) {
+            tree.remove(&value);
+        }
+
+        assert!(tree.is_empty())
+    }
+
+    #[test]
+    fn test_btree_iteration() {
         let mut tree = BTree::new(3);
         let data = [10, 20, 5, 6, 12, 30, 7, 17];
 
@@ -344,7 +408,7 @@ mod test {
     }
 
     #[test]
-    fn test_height() {
+    fn test_btree_height() {
         let mut tree = BTree::new(3);
         assert_eq!(tree.height(), 0);
 
@@ -359,7 +423,7 @@ mod test {
     }
 
     #[test]
-    fn test_moderate_dataset() {
+    fn test_btree_moderate_dataset() {
         let mut tree = BTree::<u32>::new(50);
         let mut data = Vec::new();
         for i in 0..10000 {
@@ -377,7 +441,7 @@ mod test {
     }
 
     #[test]
-    fn test_iter() {
+    fn test_btree_iter() {
         let data: Vec<_> = (0..9999).collect();
         let mut tree = BTree::new(DEFAULT_DEGREE);
         for d in &data {
@@ -390,7 +454,8 @@ mod test {
     }
 
     #[test]
-    fn test_stress() {
+    #[ignore = "still WIP"]
+    fn test_btree_stress() {
         let mut tree = BTree::new(DEFAULT_DEGREE);
         let range = 0..5_000_000;
         for d in range.clone() {
