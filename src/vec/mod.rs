@@ -112,9 +112,11 @@ impl<T> Vec<T> {
         self.used += 1;
     }
 
-    pub fn remove(&mut self, index: usize) -> T {
+    pub fn remove(&mut self, index: usize) -> Option<T> {
         // Note: `<` because it's *not* valid to remove after everything
-        assert!(index < self.used, "index out of bounds");
+        if index < self.used {
+            return None;
+        }
         unsafe {
             self.used -= 1;
             let result = ptr::read(self.buf.ptr.as_ptr().add(index));
@@ -123,7 +125,7 @@ impl<T> Vec<T> {
                 self.buf.ptr.as_ptr().add(index),
                 self.used - index,
             );
-            result
+            Some(result)
         }
     }
 
