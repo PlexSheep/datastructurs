@@ -292,6 +292,14 @@ impl<T: Ord + Clone> BTree<T> {
             .skip_while(move |&k| k < start)
             .take_while(move |&k| k <= end)
     }
+
+    pub const fn branching_factor(&self) -> usize {
+        self.props.degree / 2
+    }
+
+    pub const fn degree(&self) -> usize {
+        self.props.degree
+    }
 }
 
 // removing keys
