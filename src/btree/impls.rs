@@ -54,14 +54,12 @@ impl<'a, T: Ord + 'a> Iterator for BTreeIter<'a, T> {
             if idx < node.keys.len() {
                 let key = &node.keys[idx];
 
-                // Prepare for next iteration
-                if !node.is_leaf() && idx + 1 < node.children.len() {
-                    self.push_left_path(&node.children[idx + 1], 0);
-                }
-
-                // Push current node back with incremented index
                 if idx + 1 < node.keys.len() {
                     self.stack.push((node_ptr, idx + 1));
+                }
+
+                if !node.is_leaf() && idx + 1 < node.children.len() {
+                    self.push_left_path(&node.children[idx + 1], 0);
                 }
 
                 return Some(key);
