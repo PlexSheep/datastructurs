@@ -1,4 +1,4 @@
-use std::{mem, ptr::NonNull};
+use std::{fmt::Debug, mem, ptr::NonNull};
 
 use impls::BTreeIter;
 
@@ -8,7 +8,7 @@ mod impls;
 
 pub const DEFAULT_BRANCH_FACTOR: usize = 100;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub(crate) struct Node<T: Ord> {
     keys: Vec<T>,
     parent: Option<NodePtr<T>>,
@@ -18,7 +18,7 @@ pub(crate) struct Node<T: Ord> {
 pub(crate) type NodePtr<T> = NonNull<Node<T>>;
 pub(crate) type OpNodePtr<T> = Option<NodePtr<T>>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct BTree<T: Ord + Clone> {
     root: NodePtr<T>,
     props: BTreeProperties,
@@ -164,7 +164,8 @@ impl<T: Ord + Clone> BTree<T> {
         if self.props.is_full(&self.root) {
             // Create new root and make old root its child
             let new_root = Node::new(self.props.degree, None);
-            let old_root = mem::replace(deref_node_mut(&self.root), new_root);
+            let mut old_root = mem::replace(deref_node_mut(&self.root), new_root);
+            old_root.parent = Some(self.root);
             deref_node_mut(&self.root)
                 .children
                 .push(old_root.store_on_heap());
