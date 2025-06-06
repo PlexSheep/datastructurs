@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display, format};
+use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
 use super::{BTree, Node, NodePtr, deref_node, deref_node_mut};
