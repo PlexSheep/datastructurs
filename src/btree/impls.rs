@@ -1,7 +1,7 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
-use super::{BTree, Node, NodePtr, deref_node, deref_node_mut, deref_node_ref};
+use super::{BTree, Node, NodePtr, deref_node, deref_node, deref_node_mut};
 
 impl<T: Ord> Drop for Node<T> {
     fn drop(&mut self) {
@@ -34,13 +34,13 @@ impl<'a, T: Ord> BTreeIter<'a, T> {
     }
 
     fn push_left_path(&mut self, node_ptr: &'a NodePtr<T>, start_idx: usize) {
-        let mut node = deref_node_mut(node_ptr);
+        let mut node = deref_node_mut(*node_ptr);
         loop {
             self.stack.push((node.as_ptr(), start_idx));
             if node.is_leaf() {
                 break;
             }
-            node = deref_node_mut(&node.children[start_idx]);
+            node = deref_node_mut(node.children[start_idx]);
         }
     }
 }
@@ -73,7 +73,7 @@ impl<T: Ord + Clone + Debug> Debug for Node<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut children = Vec::with_capacity(self.children.len());
         for child_ptr in &self.children {
-            children.push(deref_node_ref(child_ptr));
+            children.push(deref_node(*child_ptr));
         }
 
         f.debug_struct("Node")

@@ -62,8 +62,8 @@ impl BTreeProperties {
     }
 
     fn split_child<T: Ord>(&self, parent_ptr: NodePtr<T>, child_index: usize) {
-        let parent = deref_node_mut(&parent_ptr);
-        let child = deref_node_mut(&parent.children[child_index]);
+        let parent = deref_node_mut(parent_ptr);
+        let child = deref_node_mut(parent.children[child_index]);
 
         let right_keys = child.keys.split_off(self.mid_key_index + 1);
         let middle_key = child.keys.pop().unwrap(); // We reinsert later
@@ -84,7 +84,7 @@ impl BTreeProperties {
 
     #[must_use]
     fn is_full<T: Ord>(&self, node: &NodePtr<T>) -> bool {
-        deref_node_ref(node).keys.len() >= self.max_keys
+        deref_node(*node).keys.len() >= self.max_keys
     }
 
     #[must_use]
@@ -95,7 +95,7 @@ impl BTreeProperties {
     }
 
     fn insert_non_full<T: Ord>(&self, node_ptr: NodePtr<T>, key: T) {
-        let node = deref_node_mut(&node_ptr);
+        let node = deref_node_mut(node_ptr);
         let index = Self::find_insertion_index(&node.keys, &key);
 
         if node.is_leaf() {
@@ -164,9 +164,9 @@ impl<T: Ord + Clone> BTree<T> {
         if self.props.is_full(&self.root) {
             // Create new root and make old root its child
             let new_root = Node::new(self.props.degree, None);
-            let mut old_root = mem::replace(deref_node_mut(&self.root), new_root);
+            let mut old_root = mem::replace(deref_node_mut(self.root), new_root);
             old_root.parent = Some(self.root);
-            deref_node_mut(&self.root)
+            deref_node_mut(self.root)
                 .children
                 .push(old_root.store_on_heap());
             self.props.split_child(self.root, 0);
@@ -177,7 +177,7 @@ impl<T: Ord + Clone> BTree<T> {
 
     #[must_use]
     pub fn contains(&self, key: &T) -> bool {
-        let mut current = deref_node_ref(&self.root);
+        let mut current = deref_node(self.root);
         loop {
             match current.keys.binary_search(key) {
                 Ok(_) => return true,
@@ -185,7 +185,7 @@ impl<T: Ord + Clone> BTree<T> {
                     if current.is_leaf() {
                         return false;
                     }
-                    current = deref_node_ref(&current.children[idx]);
+                    current = deref_node(current.children[idx]);
                 }
             }
         }
@@ -193,7 +193,7 @@ impl<T: Ord + Clone> BTree<T> {
 
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        deref_node_ref(&self.root).keys.is_empty()
+        deref_node(self.root).keys.is_empty()
     }
 
     #[must_use]
@@ -203,10 +203,10 @@ impl<T: Ord + Clone> BTree<T> {
         }
 
         let mut height = 1;
-        let mut current = deref_node_ref(&self.root);
+        let mut current = deref_node(self.root);
         while !current.is_leaf() {
             height += 1;
-            current = deref_node_ref(&current.children[0]);
+            current = deref_node(current.children[0]);
         }
         height
     }
@@ -221,12 +221,12 @@ impl<T: Ord + Clone> BTree<T> {
         if self.is_empty() {
             return None;
         }
-        let mut current = deref_node_ref(&self.root);
+        let mut current = deref_node(self.root);
         loop {
             if current.is_leaf() {
                 return Some(current.keys.first().unwrap());
             } else {
-                current = deref_node_ref(current.children.first().unwrap());
+                current = deref_node(*current.children.first().unwrap());
             }
         }
     }
@@ -236,12 +236,12 @@ impl<T: Ord + Clone> BTree<T> {
         if self.is_empty() {
             return None;
         }
-        let mut current = deref_node_ref(&self.root);
+        let mut current = deref_node(self.root);
         loop {
             if current.is_leaf() {
                 return Some(current.keys.last().unwrap());
             } else {
-                current = deref_node_ref(current.children.last().unwrap());
+                current = deref_node(*current.children.last().unwrap());
             }
         }
     }
@@ -257,13 +257,13 @@ impl<T: Ord + Clone> BTree<T> {
     #[must_use]
     pub fn depth(&self) -> usize {
         let mut depth = 0;
-        let mut current = deref_node_ref(&self.root);
+        let mut current = deref_node(self.root);
         loop {
             depth += 1;
             if current.is_leaf() {
                 return depth;
             } else {
-                current = deref_node_ref(&current.children[0])
+                current = deref_node(current.children[0])
             }
         }
     }
@@ -274,7 +274,7 @@ impl<T: Ord + Clone> BTree<T> {
     }
 
     fn node_count_inner(node_ptr: NodePtr<T>) -> usize {
-        let node = deref_node_ref(&node_ptr);
+        let node = deref_node(node_ptr);
         let mut total = 1;
         for child_ptr in &node.children {
             total += Self::node_count_inner(*child_ptr);
@@ -303,16 +303,16 @@ impl<T: Ord + Clone> BTree<T> {
         let result = self.remove_from_node(self.root, key);
 
         // Handle root underflow - if root is empty but has children, promote the only child
-        let root_node = deref_node_ref(&self.root);
+        let root_node = deref_node(self.root);
         if root_node.keys.is_empty() && !root_node.children.is_empty() {
             let old_root = self.root;
             self.root = root_node.children[0];
 
             // Update the new root's parent to None
-            deref_node_mut(&self.root).parent = None;
+            deref_node_mut(self.root).parent = None;
 
             // Prevent the old root from dropping its children
-            deref_node_mut(&old_root).children.clear();
+            deref_node_mut(old_root).children.clear();
             Node::drop(old_root);
         }
 
@@ -323,7 +323,7 @@ impl<T: Ord + Clone> BTree<T> {
     }
 
     fn remove_from_node(&mut self, node_ptr: NodePtr<T>, key: &T) -> Option<T> {
-        let node = deref_node_mut(&node_ptr);
+        let node = deref_node_mut(node_ptr);
 
         match node.keys.binary_search(key) {
             Ok(idx) => {
@@ -346,16 +346,16 @@ impl<T: Ord + Clone> BTree<T> {
                     let child_ptr = node.children[idx];
 
                     // Ensure the child has enough keys before recursing
-                    if deref_node_ref(&child_ptr).keys.len() <= self.props.min_keys {
+                    if deref_node(child_ptr).keys.len() <= self.props.min_keys {
                         self.ensure_child_has_enough_keys(node_ptr, idx);
 
                         // After rebalancing, we need to search again as indices may have changed
-                        let node = deref_node_ref(&node_ptr);
+                        let node = deref_node(node_ptr);
                         let new_idx = match node.keys.binary_search(key) {
                             Ok(i) => {
                                 // Key moved up to this node
                                 return if node.is_leaf() {
-                                    deref_node_mut(&node_ptr).keys.remove(i)
+                                    deref_node_mut(node_ptr).keys.remove(i)
                                 } else {
                                     self.remove_from_internal_node(node_ptr, i)
                                 };
@@ -373,22 +373,22 @@ impl<T: Ord + Clone> BTree<T> {
     }
 
     fn remove_from_internal_node(&mut self, node_ptr: NodePtr<T>, key_idx: usize) -> Option<T> {
-        let node = deref_node_ref(&node_ptr);
+        let node = deref_node(node_ptr);
         let key = node.keys[key_idx].clone();
 
         let left_child = node.children[key_idx];
         let right_child = node.children[key_idx + 1];
 
-        if deref_node_ref(&left_child).keys.len() > self.props.min_keys {
+        if deref_node(left_child).keys.len() > self.props.min_keys {
             // Get predecessor
             let predecessor = self.get_predecessor(left_child);
-            deref_node_mut(&node_ptr).keys[key_idx] = predecessor.clone();
+            deref_node_mut(node_ptr).keys[key_idx] = predecessor.clone();
             self.remove_from_node(left_child, &predecessor);
             Some(key)
-        } else if deref_node_ref(&right_child).keys.len() > self.props.min_keys {
+        } else if deref_node(right_child).keys.len() > self.props.min_keys {
             // Get successor
             let successor = self.get_successor(right_child);
-            deref_node_mut(&node_ptr).keys[key_idx] = successor.clone();
+            deref_node_mut(node_ptr).keys[key_idx] = successor.clone();
             self.remove_from_node(right_child, &successor);
             Some(key)
         } else {
@@ -399,12 +399,12 @@ impl<T: Ord + Clone> BTree<T> {
     }
 
     fn ensure_child_has_enough_keys(&mut self, parent_ptr: NodePtr<T>, child_idx: usize) {
-        let parent = deref_node_ref(&parent_ptr);
+        let parent = deref_node(parent_ptr);
 
         // Try to borrow from left sibling
         if child_idx > 0 {
             let left_sibling = parent.children[child_idx - 1];
-            if deref_node_ref(&left_sibling).keys.len() > self.props.min_keys {
+            if deref_node(left_sibling).keys.len() > self.props.min_keys {
                 self.borrow_from_left_sibling(parent_ptr, child_idx);
                 return;
             }
@@ -413,7 +413,7 @@ impl<T: Ord + Clone> BTree<T> {
         // Try to borrow from right sibling
         if child_idx < parent.children.len() - 1 {
             let right_sibling = parent.children[child_idx + 1];
-            if deref_node_ref(&right_sibling).keys.len() > self.props.min_keys {
+            if deref_node(right_sibling).keys.len() > self.props.min_keys {
                 self.borrow_from_right_sibling(parent_ptr, child_idx);
                 return;
             }
@@ -430,14 +430,14 @@ impl<T: Ord + Clone> BTree<T> {
     }
 
     fn borrow_from_left_sibling(&mut self, parent_ptr: NodePtr<T>, child_idx: usize) {
-        let parent = deref_node_mut(&parent_ptr);
+        let parent = deref_node_mut(parent_ptr);
         let child_ptr = parent.children[child_idx];
         let left_sibling_ptr = parent.children[child_idx - 1];
 
         let separator_key = parent.keys[child_idx - 1].clone();
 
         // Move a key from left sibling through parent to child
-        let left_sibling = deref_node_mut(&left_sibling_ptr);
+        let left_sibling = deref_node_mut(left_sibling_ptr);
         let borrowed_key = left_sibling.keys.pop().unwrap();
 
         let borrowed_child = if !left_sibling.is_leaf() {
@@ -448,24 +448,24 @@ impl<T: Ord + Clone> BTree<T> {
 
         parent.keys[child_idx - 1] = borrowed_key;
 
-        let child = deref_node_mut(&child_ptr);
+        let child = deref_node_mut(child_ptr);
         child.keys.insert(0, separator_key);
 
         if let Some(borrowed_child_ptr) = borrowed_child {
             child.children.insert(0, borrowed_child_ptr);
-            deref_node_mut(&borrowed_child_ptr).parent = Some(child_ptr);
+            deref_node_mut(borrowed_child_ptr).parent = Some(child_ptr);
         }
     }
 
     fn borrow_from_right_sibling(&mut self, parent_ptr: NodePtr<T>, child_idx: usize) {
-        let parent = deref_node_mut(&parent_ptr);
+        let parent = deref_node_mut(parent_ptr);
         let child_ptr = parent.children[child_idx];
         let right_sibling_ptr = parent.children[child_idx + 1];
 
         let separator_key = parent.keys[child_idx].clone();
 
         // Move a key from right sibling through parent to child
-        let right_sibling = deref_node_mut(&right_sibling_ptr);
+        let right_sibling = deref_node_mut(right_sibling_ptr);
         let borrowed_key = right_sibling.keys.remove(0).unwrap();
 
         let borrowed_child = if !right_sibling.is_leaf() {
@@ -476,17 +476,17 @@ impl<T: Ord + Clone> BTree<T> {
 
         parent.keys[child_idx] = borrowed_key;
 
-        let child = deref_node_mut(&child_ptr);
+        let child = deref_node_mut(child_ptr);
         child.keys.push(separator_key);
 
         if let Some(borrowed_child_ptr) = borrowed_child {
             child.children.push(borrowed_child_ptr);
-            deref_node_mut(&borrowed_child_ptr).parent = Some(child_ptr);
+            deref_node_mut(borrowed_child_ptr).parent = Some(child_ptr);
         }
     }
 
     fn merge_children(&mut self, parent_ptr: NodePtr<T>, separator_idx: usize) {
-        let parent = deref_node_mut(&parent_ptr);
+        let parent = deref_node_mut(parent_ptr);
         let left_child_ptr = parent.children[separator_idx];
         let right_child_ptr = parent.children[separator_idx + 1];
 
@@ -494,18 +494,18 @@ impl<T: Ord + Clone> BTree<T> {
         parent.children.remove(separator_idx + 1);
 
         // Merge right child into left child
-        let right_child = deref_node_mut(&right_child_ptr);
+        let right_child = deref_node_mut(right_child_ptr);
         let mut right_keys = mem::take(&mut right_child.keys);
         let mut right_children = mem::take(&mut right_child.children);
 
-        let left_child = deref_node_mut(&left_child_ptr);
+        let left_child = deref_node_mut(left_child_ptr);
         left_child.keys.push(separator_key);
         left_child.keys.extend(right_keys.drain_all());
 
         if !right_children.is_empty() {
             // Update parent pointers for the children we're moving
             for child_ptr in &right_children {
-                deref_node_mut(child_ptr).parent = Some(left_child_ptr);
+                deref_node_mut(*child_ptr).parent = Some(left_child_ptr);
             }
             left_child.children.extend(right_children.drain_all());
         }
@@ -515,18 +515,18 @@ impl<T: Ord + Clone> BTree<T> {
     }
 
     fn get_predecessor(&self, node_ptr: NodePtr<T>) -> T {
-        let mut current = deref_node_ref(&node_ptr);
+        let mut current = deref_node(node_ptr);
         while !current.is_leaf() {
             let last_child_idx = current.children.len() - 1;
-            current = deref_node_ref(&current.children[last_child_idx]);
+            current = deref_node(current.children[last_child_idx]);
         }
         current.keys.last().unwrap().clone()
     }
 
     fn get_successor(&self, node_ptr: NodePtr<T>) -> T {
-        let mut current = deref_node_ref(&node_ptr);
+        let mut current = deref_node(node_ptr);
         while !current.is_leaf() {
-            current = deref_node_ref(&current.children[0]);
+            current = deref_node(current.children[0]);
         }
         current.keys[0].clone()
     }
@@ -540,14 +540,8 @@ fn deref_node<'a, T: Ord + 'a>(p: NodePtr<T>) -> &'a Node<T> {
 
 #[inline]
 #[must_use]
-fn deref_node_ref<T: Ord>(p: &NodePtr<T>) -> &Node<T> {
-    unsafe { &*p.as_ptr() }
-}
-
-#[inline]
-#[must_use]
 #[allow(clippy::mut_from_ref)]
-fn deref_node_mut<T: Ord>(p: &NodePtr<T>) -> &mut Node<T> {
+fn deref_node_mut<'a, T: Ord + 'a>(p: NodePtr<T>) -> &'a mut Node<T> {
     unsafe { &mut *p.as_ptr() }
 }
 
