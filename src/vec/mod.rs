@@ -15,7 +15,7 @@ use crate::raw_vec::RawVec;
 
 mod impls;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Vec<T> {
     used: usize,
     buf: RawVec<T>,

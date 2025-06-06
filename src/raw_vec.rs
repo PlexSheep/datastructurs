@@ -3,7 +3,7 @@ use std::{
     ptr::NonNull,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) struct RawVec<T> {
     pub(crate) ptr: NonNull<T>,
     pub(crate) capacity: usize,

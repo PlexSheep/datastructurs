@@ -239,3 +239,9 @@ fn test_vec_string_operations() {
         assert_eq!(v[i], s.to_string());
     }
 }
+
+#[test]
+fn test_vec_debug_repr() {
+    let v = Vec::from(&[19, 1, 24, 13, 25, 25][..]);
+    assert_eq!(format!("{v:?}"), "[19, 1, 24, 13, 25, 25]")
+}
