@@ -52,6 +52,7 @@ impl<T> Vec<T> {
         let mut v = Vec::<T>::with_capacity(data.len());
         unsafe {
             ptr::copy_nonoverlapping(data.as_ptr(), v.as_mut_ptr(), data.len());
+            v.set_len(data.len());
         }
         v
     }
