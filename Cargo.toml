@@ -13,3 +13,10 @@ keywords = ["datastructures"]
 
 
 [dependencies]
+
+[workspace]
+members = ["crates/btree_cinema", "."]
+default-members = ["."]
+
+[workspace.dependencies]
+datastructurs = { path = "." }

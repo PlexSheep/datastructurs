@@ -1,0 +1,9 @@
+[package]
+name = "btree_cinema"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+datastructurs.workspace = true
+getopts = "0.2.21"
+rand = "0.9.1"
