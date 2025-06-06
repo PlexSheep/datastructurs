@@ -11,6 +11,7 @@ fn main() {
         tree.remove(i);
         assert!(!tree.contains(i));
     }
+    println!("{tree}");
 
     for i in 0..50_000 {
         tree.remove(&i);

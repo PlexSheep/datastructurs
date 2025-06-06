@@ -10,7 +10,7 @@ fn main() {
     for i in 0..20 {
         tree.insert(i);
         assert!(tree.contains(&i));
-        println!("{tree:#?}");
+        println!("{tree}");
         wait_user();
     }
 
@@ -19,6 +19,8 @@ fn main() {
         wait_user();
         tree.remove(&i);
         assert!(!tree.contains(&i));
-        println!("{tree:#?}");
+        println!("{tree}");
     }
+
+    println!("{tree}");
 }

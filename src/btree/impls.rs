@@ -1,7 +1,7 @@
-use std::fmt::{Debug, Display};
+use std::fmt::{Debug, Display, format};
 use std::marker::PhantomData;
 
-use super::{BTree, Node, NodePtr, deref_node, deref_node, deref_node_mut};
+use super::{BTree, Node, NodePtr, deref_node, deref_node_mut};
 
 impl<T: Ord> Drop for Node<T> {
     fn drop(&mut self) {
@@ -91,5 +91,31 @@ impl<T: Ord + Clone + Debug> Debug for BTree<T> {
             .field("props", &self.props)
             .field("Nodes", deref_node(self.root))
             .finish()
+    }
+}
+
+impl<T: Ord + Clone + Display + Debug> Display for BTree<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn render_child<T: Ord + Clone + Display + Debug>(
+            node: &Node<T>,
+            depth: usize,
+            buffer: &mut String,
+        ) {
+            if depth > 0 {
+                buffer.push_str(&format!("{:>1$}", "|-", (depth) * 2));
+            }
+            buffer.push_str(&format!("{:?}\n", node.keys));
+            for child_ptr in &node.children {
+                let node = deref_node(*child_ptr);
+                render_child(node, depth + 1, buffer);
+            }
+        }
+
+        let mut buf = String::new();
+        let root = deref_node(self.root);
+
+        render_child(root, 0, &mut buf);
+
+        write!(f, "{buf}")
     }
 }
