@@ -1,6 +1,8 @@
 use std::fmt::{Debug, Write};
 use std::ptr::NonNull;
 
+use impls::{Iter, IterMut};
+
 mod impls;
 
 pub(crate) type NodePtr<T> = NonNull<Node<T>>;
@@ -137,10 +139,8 @@ impl<T> LinkedList<T> {
                 // Update new head's prev pointer
                 deref_node_mut(new_head_ptr).prev = None;
                 self.head = Some(new_head_ptr);
-                println!("unlink head, next node is: {:?}", self.head);
             }
             None => {
-                println!("was only");
                 // This was the only node
                 self.head = None;
                 self.tail = None;
@@ -175,7 +175,6 @@ impl<T> LinkedList<T> {
         if self.is_empty() {
             return None;
         }
-        println!("pop len: {}", self.len());
         debug_assert!(self.head.is_some());
 
         let head_ptr = self.unlink_head();
@@ -255,6 +254,24 @@ impl<T> LinkedList<T> {
     #[must_use]
     pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
         self.get_node_mut(index).map(|n| &mut n.value)
+    }
+
+    #[must_use]
+    pub fn iter(&self) -> Iter<T> {
+        Iter {
+            current: self.head,
+            remaining: self.len,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    #[must_use]
+    pub fn iter_mut(&mut self) -> IterMut<T> {
+        IterMut {
+            current: self.head,
+            remaining: self.len,
+            _phantom: std::marker::PhantomData,
+        }
     }
 }
 

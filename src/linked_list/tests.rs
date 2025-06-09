@@ -97,3 +97,51 @@ fn test_ll_push_many() {
         assert!(ll.contains(&i))
     }
 }
+
+#[test]
+fn test_ll_iter() {
+    let mut ll = LinkedList::new();
+    for i in 0..10 {
+        ll.push_back(i);
+    }
+    for i in ll.iter() {
+        println!("i in ll: {i}")
+    }
+    for (li, i) in ll.iter().zip(0..10) {
+        assert_eq!(*li, i)
+    }
+}
+
+#[test]
+fn test_ll_iter_mut() {
+    let mut ll = LinkedList::new();
+    for i in 0..10 {
+        ll.push_back(i);
+    }
+    for i in ll.iter_mut() {
+        *i += 100;
+    }
+    for i in ll.iter() {
+        println!("i in ll: {i}")
+    }
+    for (li, i) in ll.iter().zip(0..10) {
+        assert_eq!(*li, 100 + i)
+    }
+}
+
+#[test]
+fn test_ll_iter_into() {
+    let mut ll = LinkedList::new();
+    for i in 0..10 {
+        ll.push_back(i);
+    }
+    for i in ll.iter_mut() {
+        *i += 100;
+    }
+    for i in ll.iter() {
+        println!("i in ll: {i}")
+    }
+    for (li, i) in ll.into_iter().zip(0..10) {
+        assert_eq!(li, 100 + i)
+    }
+}

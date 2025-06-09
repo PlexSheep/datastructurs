@@ -1,7 +1,9 @@
 use std::fmt::Debug;
+use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
+use std::ptr;
 
-use super::{LinkedList, Node};
+use super::{LinkedList, Node, NodePtr, OpNodePtr, deref_node, deref_node_mut};
 
 impl<T> Drop for LinkedList<T> {
     fn drop(&mut self) {
@@ -49,5 +51,86 @@ impl<T: Debug> Debug for Node<T> {
             .field("prev", &self.prev)
             .field("_addr", &self.as_ptr())
             .finish()
+    }
+}
+
+pub struct Iter<'a, T> {
+    pub(crate) current: OpNodePtr<T>,
+    pub(crate) remaining: usize,
+    pub(crate) _phantom: std::marker::PhantomData<&'a T>,
+}
+
+pub struct IterMut<'a, T> {
+    pub(crate) current: OpNodePtr<T>,
+    pub(crate) remaining: usize,
+    pub(crate) _phantom: std::marker::PhantomData<&'a mut T>,
+}
+
+pub struct IntoIter<T> {
+    pub(crate) list: LinkedList<T>,
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.remaining == 0 {
+            return None;
+        }
+
+        let current_ptr = self.current?;
+        let current_node = deref_node(current_ptr);
+
+        self.current = current_node.next;
+        self.remaining -= 1;
+
+        Some(&current_node.value)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.remaining, Some(self.remaining))
+    }
+}
+
+impl<T> IntoIterator for LinkedList<T> {
+    type Item = T;
+    type IntoIter = IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter { list: self }
+    }
+}
+
+impl<'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.remaining == 0 {
+            return None;
+        }
+
+        let current_ptr = self.current?;
+        let current_node = deref_node_mut(current_ptr);
+
+        self.current = current_node.next;
+        self.remaining -= 1;
+
+        Some(&mut current_node.value)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.remaining, Some(self.remaining))
+    }
+}
+
+impl<T> Iterator for IntoIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.list.pop_front()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.list.len, Some(self.list.len))
     }
 }
