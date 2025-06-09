@@ -5,7 +5,7 @@ use super::{LinkedList, Node};
 
 impl<T> Drop for LinkedList<T> {
     fn drop(&mut self) {
-        while let Some(_element) = self.pop_front() {}
+        self.clear();
     }
 }
 

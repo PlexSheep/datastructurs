@@ -33,10 +33,6 @@ impl<T> Node<T> {
         let a: *const Self = self;
         unsafe { NodePtr::new_unchecked(a as *mut Self) }
     }
-
-    fn drop(node_ptr: NodePtr<T>) {
-        drop(deref_node_box(node_ptr))
-    }
 }
 
 impl<T> LinkedList<T> {
@@ -153,7 +149,8 @@ impl<T> LinkedList<T> {
     }
 
     pub fn clear(&mut self) {
-        todo!()
+        while self.pop_front().is_some() {}
+        debug_assert!(self.is_empty());
     }
 
     #[must_use]
