@@ -1,29 +1,11 @@
 use std::fmt::Debug;
 use std::ops::{Index, IndexMut};
 
-use super::{LinkedList, Node, deref_node};
+use super::{LinkedList, Node};
 
 impl<T> Drop for LinkedList<T> {
     fn drop(&mut self) {
-        let mut next_node = deref_node(match self.head {
-            Some(h) => h,
-            None => return,
-        });
-        let mut current_node;
-        loop {
-            current_node = next_node;
-            match current_node.next {
-                None => break,
-                Some(p_next) => {
-                    if p_next == self.head.unwrap() {
-                        // reached end
-                        break;
-                    };
-                    next_node = deref_node(p_next)
-                }
-            }
-            Node::drop(current_node.as_ptr());
-        }
+        while let Some(_element) = self.pop_front() {}
     }
 }
 
