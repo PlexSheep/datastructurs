@@ -199,22 +199,22 @@ impl<T> LinkedList<T> {
 
     #[must_use]
     pub(crate) fn last_node(&self) -> Option<&Node<T>> {
-        todo!()
+        self.tail.map(|ptr| deref_node(ptr))
     }
 
     #[must_use]
     pub(crate) fn first_node(&self) -> Option<&Node<T>> {
-        todo!()
+        self.head.map(|ptr| deref_node(ptr))
     }
 
     #[must_use]
     pub(crate) fn last_node_mut(&mut self) -> Option<&mut Node<T>> {
-        todo!()
+        self.tail.map(|ptr| deref_node_mut(ptr))
     }
 
     #[must_use]
     pub(crate) fn first_node_mut(&mut self) -> Option<&mut Node<T>> {
-        todo!()
+        self.head.map(|ptr| deref_node_mut(ptr))
     }
 
     #[must_use]
@@ -239,12 +239,12 @@ impl<T> LinkedList<T> {
 
     #[must_use]
     pub(crate) fn get_node(&self, index: usize) -> Option<&Node<T>> {
-        todo!()
+        self.find_node(index).map(|p| deref_node(p))
     }
 
     #[must_use]
     pub(crate) fn get_node_mut(&mut self, index: usize) -> Option<&mut Node<T>> {
-        todo!()
+        self.find_node(index).map(|p| deref_node_mut(p))
     }
 
     #[must_use]
