@@ -306,8 +306,8 @@ impl<T: PartialEq> LinkedList<T> {
 }
 
 impl<T: Debug> LinkedList<T> {
-    pub fn format_node_content(&self) -> String {
-        let mut buf = "Contents of LinkedList:\n".to_string();
+    pub fn debug_nodes(&self) -> String {
+        let mut buf = "LinkedList: {\n".to_string();
         let mut current_node = deref_node(match self.head {
             Some(h) => h,
             None => {
@@ -316,7 +316,7 @@ impl<T: Debug> LinkedList<T> {
         });
 
         loop {
-            writeln!(&mut buf, "{current_node:?}").unwrap();
+            writeln!(&mut buf, "\t{current_node:?}").unwrap();
 
             match current_node.next {
                 None => break,
@@ -329,6 +329,7 @@ impl<T: Debug> LinkedList<T> {
                 }
             }
         }
+        write!(&mut buf, "}}").unwrap();
         buf
     }
 }

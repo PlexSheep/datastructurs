@@ -35,11 +35,7 @@ impl<T> Default for LinkedList<T> {
 
 impl<T: Debug> Debug for LinkedList<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LinkedList")
-            .field("len", &self.len)
-            .field("head", &self.head)
-            .field("tail", &self.tail)
-            .finish()
+        f.debug_list().entries(self.iter()).finish()
     }
 }
 
