@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Write};
 use std::ptr::NonNull;
 
 mod impls;
@@ -34,7 +35,7 @@ impl<T> Node<T> {
     }
 
     fn drop(node_ptr: NodePtr<T>) {
-        unsafe { drop(Box::from_raw(node_ptr.as_ptr())) }
+        drop(deref_node_box(node_ptr))
     }
 }
 
@@ -58,6 +59,9 @@ impl<T> LinkedList<T> {
         self.len() == 0
     }
 
+    // BUG: Push back and push front seems to be swapped
+    // BUG: Push back and push front do not always set the node links correctly (none or some
+    // confused?)
     pub fn push_back(&mut self, element: T) {
         let mut node = Box::new(Node::new(element));
 
@@ -87,11 +91,8 @@ impl<T> LinkedList<T> {
             let first_node = deref_node_mut(p_first_node);
 
             node.next = Some(p_first_node);
-            if let Some(first_node_prev) = first_node.prev {
-                node.prev = Some(first_node_prev);
-                first_node.prev = None;
-            }
-            first_node.prev = Some(node.as_ptr())
+            node.prev = first_node.prev;
+            first_node.prev = Some(node.as_ptr());
         } else {
             // node stays without connections
         }
@@ -105,12 +106,50 @@ impl<T> LinkedList<T> {
         self.len += 1;
     }
 
-    pub fn pop_back(&mut self) -> Option<T> {
-        todo!()
+    pub fn pop_front(&mut self) -> Option<T> {
+        let p_first = self.head?;
+        let head = deref_node_box(p_first);
+
+        let mut prev = head.prev.map(deref_node_mut);
+        let mut next = head.next.map(deref_node_mut);
+        self.head = head.next;
+
+        if prev.is_some() && next.is_some() {
+            prev.as_mut().unwrap().next = Some(next.as_ref().unwrap().as_ptr());
+            next.as_mut().unwrap().prev = Some(prev.as_ref().unwrap().as_ptr());
+        } else if let Some(prev) = prev {
+            prev.next = None;
+        } else if let Some(next) = next {
+            next.prev = None;
+        }
+
+        let value = head.value;
+        self.len -= 1;
+        Some(value)
     }
 
-    pub fn pop_front(&mut self) -> Option<T> {
-        todo!()
+    pub fn pop_back(&mut self) -> Option<T> {
+        let p_last = self.tail?;
+        let tail = deref_node_box(p_last);
+
+        println!("deref");
+        let mut prev = tail.prev.map(deref_node_mut);
+        let mut next = tail.next.map(deref_node_mut);
+        self.tail = tail.prev;
+
+        println!("set new order");
+        if prev.is_some() && next.is_some() {
+            prev.as_mut().unwrap().next = Some(next.as_ref().unwrap().as_ptr());
+            next.as_mut().unwrap().prev = Some(prev.as_ref().unwrap().as_ptr());
+        } else if let Some(prev) = prev {
+            prev.next = None;
+        } else if let Some(next) = next {
+            next.prev = None;
+        }
+
+        let value = tail.value;
+        self.len -= 1;
+        Some(value)
     }
 
     pub fn clear(&mut self) {
@@ -206,6 +245,40 @@ impl<T: PartialEq> LinkedList<T> {
         }
         false
     }
+}
+
+impl<T: Debug> LinkedList<T> {
+    pub fn format_node_content(&self) -> String {
+        let mut buf = "Contents of LinkedList:\n".to_string();
+        let mut current_node = deref_node(match self.head {
+            Some(h) => h,
+            None => {
+                return "(No head)".to_string();
+            }
+        });
+
+        loop {
+            writeln!(&mut buf, "{current_node:?}").unwrap();
+
+            match current_node.next {
+                None => break,
+                Some(p_next) => {
+                    if p_next == self.head.unwrap() {
+                        // reached end
+                        break;
+                    };
+                    current_node = deref_node(p_next)
+                }
+            }
+        }
+        buf
+    }
+}
+
+#[inline]
+#[must_use]
+fn deref_node_box<'a, T: 'a>(p: NodePtr<T>) -> Box<Node<T>> {
+    unsafe { Box::from_raw(p.as_ptr()) }
 }
 
 #[inline]

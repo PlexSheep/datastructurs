@@ -7,7 +7,7 @@ fn test_ll_push_front() {
         ll.push_front(i);
     }
     for i in 0..12 {
-        println!("i={i}");
+        println!("i={i}\n{}", ll.format_node_content());
         assert!(ll.contains(&i))
     }
 }
@@ -19,7 +19,7 @@ fn test_ll_push_back() {
         ll.push_back(i);
     }
     for i in 0..12 {
-        println!("i={i}");
+        println!("i={i}\n{}", ll.format_node_content());
         assert!(ll.contains(&i))
     }
 }
@@ -33,7 +33,8 @@ fn test_ll_push_pop_front() {
     for i in 0..12 {
         assert!(ll.contains(&i))
     }
-    for _ in 0..12 {
+    for i in 0..12 {
+        println!("i={i}\n{}", ll.format_node_content());
         ll.pop_front();
     }
     assert!(ll.is_empty())
@@ -48,7 +49,8 @@ fn test_ll_push_pop_back() {
     for i in 0..12 {
         assert!(ll.contains(&i))
     }
-    for _ in 0..12 {
+    for i in 0..12 {
+        println!("i={i}\n{}", ll.format_node_content());
         ll.pop_back();
     }
     assert!(ll.is_empty())

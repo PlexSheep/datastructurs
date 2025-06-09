@@ -65,6 +65,7 @@ impl<T: Debug> Debug for Node<T> {
             .field("value", &self.value)
             .field("next", &self.next)
             .field("prev", &self.prev)
+            .field("_addr", &self.as_ptr())
             .finish()
     }
 }
