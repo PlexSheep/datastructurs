@@ -55,97 +55,141 @@ impl<T> LinkedList<T> {
         self.len() == 0
     }
 
-    // BUG: Push back and push front seems to be swapped
-    // BUG: Push back and push front do not always set the node links correctly (none or some
-    // confused?)
-    pub fn push_back(&mut self, element: T) {
-        let mut node = Box::new(Node::new(element));
-
-        if let Some(p_last_node) = self.tail {
-            let last_node = deref_node_mut(p_last_node);
-
-            node.prev = Some(p_last_node);
-            node.next = Some(self.head.unwrap());
-            last_node.next = Some(node.as_ptr());
-        } else {
-            // node stays without connections
-        }
-        self.tail = Some(node.as_ptr());
-        if self.head.is_none() {
-            self.head = Some(node.as_ptr());
-        }
-
-        Box::leak(node); // we restore the box in the Drop implementation to free the memory
-
+    /// Creates a new node and returns its pointer, updating the list length
+    fn create_node(&mut self, value: T) -> NodePtr<T> {
+        let node = Box::new(Node::new(value));
+        let node_ptr = node.as_ptr();
+        Box::leak(node);
         self.len += 1;
+        node_ptr
+    }
+
+    /// Removes a node and returns its value, updating the list length
+    fn destroy_node(&mut self, node_ptr: NodePtr<T>) -> T {
+        let node = deref_node_box(node_ptr);
+        self.len -= 1;
+        node.value
+    }
+
+    /// Finds the node at the given index
+    fn find_node(&self, index: usize) -> Option<NodePtr<T>> {
+        if index >= self.len {
+            return None;
+        }
+
+        // PERF: Choose direction based on index
+        if index < self.len / 2 {
+            // Search from head
+            let mut current_ptr = self.head?;
+            for _ in 0..index {
+                current_ptr = deref_node(current_ptr).next?;
+            }
+            Some(current_ptr)
+        } else {
+            // Search from tail (reverse direction)
+            let mut current_ptr = self.tail?;
+            for _ in 0..(self.len - 1 - index) {
+                current_ptr = deref_node(current_ptr).prev?;
+            }
+            Some(current_ptr)
+        }
+    }
+
+    fn link_as_only_node(&mut self, node_ptr: NodePtr<T>) {
+        debug_assert!(self.head.is_none() && self.tail.is_none());
+        self.head = Some(node_ptr);
+        self.tail = Some(node_ptr);
+    }
+
+    pub fn push_back(&mut self, element: T) {
+        let p_node = self.create_node(element);
+
+        match self.tail {
+            None => self.link_as_only_node(p_node),
+            Some(p_old_tail) => {
+                deref_node_mut(p_old_tail).next = Some(p_node);
+                deref_node_mut(p_node).prev = Some(p_old_tail);
+                self.tail = Some(p_node)
+            }
+        }
     }
 
     pub fn push_front(&mut self, element: T) {
-        let mut node = Box::new(Node::new(element));
+        let p_node = self.create_node(element);
 
-        if let Some(p_first_node) = self.head {
-            let first_node = deref_node_mut(p_first_node);
-
-            node.next = Some(p_first_node);
-            node.prev = first_node.prev;
-            first_node.prev = Some(node.as_ptr());
-        } else {
-            // node stays without connections
+        match self.head {
+            None => self.link_as_only_node(p_node),
+            Some(p_old_head) => {
+                deref_node_mut(p_node).next = Some(p_old_head);
+                deref_node_mut(p_old_head).prev = Some(p_node);
+                self.head = Some(p_node)
+            }
         }
-        self.head = Some(node.as_ptr());
-        if self.tail.is_none() {
-            self.tail = Some(node.as_ptr());
+    }
+
+    /// Unlinks the head node and updates head pointer
+    fn unlink_head(&mut self) -> NodePtr<T> {
+        let head_ptr = self.head.expect("Cannot unlink head from empty list");
+        let head_node = deref_node(head_ptr);
+
+        match head_node.next {
+            Some(new_head_ptr) => {
+                // Update new head's prev pointer
+                deref_node_mut(new_head_ptr).prev = None;
+                self.head = Some(new_head_ptr);
+                println!("unlink head, next node is: {:?}", self.head);
+            }
+            None => {
+                println!("was only");
+                // This was the only node
+                self.head = None;
+                self.tail = None;
+            }
         }
 
-        Box::leak(node); // we restore the box in the Drop implementation to free the memory
+        head_ptr
+    }
 
-        self.len += 1;
+    /// Unlinks the tail node and updates tail pointer
+    fn unlink_tail(&mut self) -> NodePtr<T> {
+        let tail_ptr = self.tail.expect("Cannot unlink tail from empty list");
+        let tail_node = deref_node(tail_ptr);
+
+        match tail_node.prev {
+            Some(new_tail_ptr) => {
+                // Update new tail's next pointer
+                deref_node_mut(new_tail_ptr).next = None;
+                self.tail = Some(new_tail_ptr);
+            }
+            None => {
+                // This was the only node
+                self.head = None;
+                self.tail = None;
+            }
+        }
+
+        tail_ptr
     }
 
     pub fn pop_front(&mut self) -> Option<T> {
-        let p_first = self.head?;
-        let head = deref_node_box(p_first);
-
-        let mut prev = head.prev.map(deref_node_mut);
-        let mut next = head.next.map(deref_node_mut);
-        self.head = head.next;
-
-        if prev.is_some() && next.is_some() {
-            prev.as_mut().unwrap().next = Some(next.as_ref().unwrap().as_ptr());
-            next.as_mut().unwrap().prev = Some(prev.as_ref().unwrap().as_ptr());
-        } else if let Some(prev) = prev {
-            prev.next = None;
-        } else if let Some(next) = next {
-            next.prev = None;
+        if self.is_empty() {
+            return None;
         }
+        println!("pop len: {}", self.len());
+        debug_assert!(self.head.is_some());
 
-        let value = head.value;
-        self.len -= 1;
-        Some(value)
+        let head_ptr = self.unlink_head();
+        Some(self.destroy_node(head_ptr))
     }
 
     pub fn pop_back(&mut self) -> Option<T> {
-        let p_last = self.tail?;
-        let tail = deref_node_box(p_last);
-
-        println!("deref");
-        let mut prev = tail.prev.map(deref_node_mut);
-        let mut next = tail.next.map(deref_node_mut);
-        self.tail = tail.prev;
-
-        println!("set new order");
-        if prev.is_some() && next.is_some() {
-            prev.as_mut().unwrap().next = Some(next.as_ref().unwrap().as_ptr());
-            next.as_mut().unwrap().prev = Some(prev.as_ref().unwrap().as_ptr());
-        } else if let Some(prev) = prev {
-            prev.next = None;
-        } else if let Some(next) = next {
-            next.prev = None;
+        if self.is_empty() {
+            return None;
         }
+        debug_assert!(self.head.is_some());
 
-        let value = tail.value;
-        self.len -= 1;
-        Some(value)
+        let tail_ptr = self.unlink_tail();
+        Some(self.destroy_node(tail_ptr))
     }
 
     pub fn clear(&mut self) {

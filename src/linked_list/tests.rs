@@ -71,8 +71,14 @@ fn test_ll_ins_multiple() {
 
     ll.push_front(1);
     ll.push_front(2);
+    println!("{ll:?}");
+    println!("{}", ll.format_node_content());
     ll.push_front(3);
+    println!("{ll:?}");
+    println!("{}", ll.format_node_content());
     ll.push_front(4);
+    println!("{ll:?}");
+    println!("{}", ll.format_node_content());
 
     assert!(ll.contains(&4));
     assert!(ll.contains(&3));
