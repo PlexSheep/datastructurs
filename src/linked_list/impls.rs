@@ -1,9 +1,7 @@
 use std::fmt::Debug;
-use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
-use std::ptr;
 
-use super::{LinkedList, Node, NodePtr, OpNodePtr, deref_node, deref_node_mut};
+use super::{LinkedList, Node, OpNodePtr, deref_node, deref_node_mut};
 
 impl<T> Drop for LinkedList<T> {
     fn drop(&mut self) {
