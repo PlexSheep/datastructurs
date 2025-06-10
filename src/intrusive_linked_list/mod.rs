@@ -25,6 +25,8 @@ pub trait IntrusiveListAccessor<T> {
     unsafe fn from_node_mut(node: &mut ListLink) -> &mut T;
 }
 
+// BUG: the references to the list elements are broken when the datastructure owning the data is
+// reallocated. THis can happen when a Vec grows beyond it's capacity.
 pub struct IntrusiveList<T, A: IntrusiveListAccessor<T>> {
     // TODO: make these private again
     pub head: OpNodePtr,

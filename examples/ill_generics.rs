@@ -5,7 +5,10 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use datastructurs::intrusive_linked_list::{IntrusiveList, ListLink};
+use datastructurs::{
+    intrusive_linked_list::{IntrusiveList, ListLink},
+    trace,
+};
 use datastructurs_macros::IntoIntrusiveList;
 
 #[derive(Debug)]

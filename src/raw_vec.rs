@@ -50,6 +50,10 @@ impl<T> RawVec<T> {
             None => alloc::handle_alloc_error(new_layout),
         };
         self.capacity = new_cap;
+        trace!(
+            "growing raw_vec finished, now at {:?} with capacity {}",
+            self.ptr, self.capacity
+        );
     }
 
     pub(crate) fn grow(&mut self) {
