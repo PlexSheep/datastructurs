@@ -128,3 +128,6 @@ impl<T> Iterator for IntoIter<T> {
         (self.list.len, Some(self.list.len))
     }
 }
+
+unsafe impl<T: Send> Send for LinkedList<T> {}
+unsafe impl<T: Sync> Sync for LinkedList<T> {}

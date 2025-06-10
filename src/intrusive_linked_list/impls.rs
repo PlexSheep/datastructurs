@@ -112,3 +112,6 @@ impl<'a, A: IntrusiveListAccessor<T>, T> Iterator for IterMut<'a, A, T> {
         (self.remaining, Some(self.remaining))
     }
 }
+
+unsafe impl<T: Send, A: IntrusiveListAccessor<T>> Send for IntrusiveList<T, A> {}
+unsafe impl<T: Sync, A: IntrusiveListAccessor<T>> Sync for IntrusiveList<T, A> {}
