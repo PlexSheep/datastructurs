@@ -124,6 +124,7 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
                 self.tail = Some(node.as_ptr())
             }
         }
+        self.len += 1;
     }
 
     pub fn push_front(&mut self, element: &mut T) {
@@ -137,6 +138,7 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
                 self.head = Some(node.as_ptr())
             }
         }
+        self.len += 1;
     }
 
     /// Finds the node at the given index
