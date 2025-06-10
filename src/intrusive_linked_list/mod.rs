@@ -74,48 +74,6 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
         self.tail = Some(p_node);
     }
 
-    /// Unlinks the head node and updates head pointer
-    fn unlink_head(&mut self) -> NodePtr {
-        let head_ptr = self.head.expect("Cannot unlink head from empty list");
-        let head_node = deref_node(head_ptr);
-
-        match head_node.next {
-            Some(new_head_ptr) => {
-                // Update new head's prev pointer
-                deref_node_mut(new_head_ptr).prev = None;
-                self.head = Some(new_head_ptr);
-            }
-            None => {
-                // This was the only node
-                self.head = None;
-                self.tail = None;
-            }
-        }
-
-        head_ptr
-    }
-
-    /// Unlinks the tail node and updates tail pointer
-    fn unlink_tail(&mut self) -> NodePtr {
-        let tail_ptr = self.tail.expect("Cannot unlink tail from empty list");
-        let tail_node = deref_node(tail_ptr);
-
-        match tail_node.prev {
-            Some(new_tail_ptr) => {
-                // Update new tail's next pointer
-                deref_node_mut(new_tail_ptr).next = None;
-                self.tail = Some(new_tail_ptr);
-            }
-            None => {
-                // This was the only node
-                self.head = None;
-                self.tail = None;
-            }
-        }
-
-        tail_ptr
-    }
-
     pub fn push_back(&mut self, element: &mut T) {
         let node = A::get_node_mut(element);
 

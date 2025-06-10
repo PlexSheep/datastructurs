@@ -5,7 +5,6 @@ use syn::{Ident, Path};
 pub struct Symbol(&'static str);
 
 pub const ACCESSOR: Symbol = Symbol("accessor");
-pub const INTRUSIVE_LIST: Symbol = Symbol("intrusive_list");
 
 impl PartialEq<Symbol> for Ident {
     fn eq(&self, word: &Symbol) -> bool {

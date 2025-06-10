@@ -90,7 +90,9 @@ fn test_ill_manual_impl_proc_macro() {
             }
         }
     }
+
     type List = IntrusiveList<Foo, FooAcc>;
+
     let mut list = List::new();
     let mut foos = vec![];
     for i in 0..19 {
@@ -112,4 +114,33 @@ fn test_ill_manual_impl_proc_macro() {
     assert!(list.contains(elem_to_remove));
     list.remove(elem_to_remove);
     assert!(!list.contains(elem_to_remove))
+}
+
+#[test]
+fn test_ill_basic_derive() {
+    #[derive(PartialEq, Debug, IntoIntrusiveList)]
+    struct Bla {
+        bi: f32,
+        #[accessor(Blac)]
+        link: ListLink,
+    }
+    type List = IntrusiveList<Bla, Blac>;
+    let mut list = List::new();
+    let mut datastore = Vec::new();
+    for i in 0..22 {
+        let bi = i as f32;
+        let bla = Bla {
+            bi,
+            link: Default::default(),
+        };
+        datastore.push(bla);
+        list.push_back(&mut datastore[i]);
+    }
+
+    dbg!(&datastore);
+    println!("{}", list.debug_nodes());
+
+    for i in 0..22 {
+        assert_eq!(list[i].bi, i as f32)
+    }
 }

@@ -7,6 +7,7 @@ mod symbols;
 use symbols::*;
 
 #[derive(Debug)]
+#[allow(unused)]
 struct ParsedAccField(Option<Ident>, Type, Visibility, Attribute);
 
 #[derive(FromField, Debug)]
@@ -49,25 +50,17 @@ pub fn derive_intrusive_linked_list(item: TokenStream) -> TokenStream {
         .into_iter()
         .filter(|field| {
             field.attrs.iter().any(|attr| match &attr.meta {
-                syn::Meta::List(lv) => {
-                    let a = lv.path == ACCESSOR;
-                    eprintln!("AAAA: keep list '{lv:?}': {a}");
-                    a
-                }
-                other => {
-                    eprintln!("AAAA: ignore crap: {other:?}");
-                    false
-                }
+                syn::Meta::List(lv) => lv.path == ACCESSOR,
+                _other => false,
             })
         })
         .map(|field| ParsedAccField(field.ident, field.ty, field.vis, field.attrs[0].clone()))
         .collect();
 
     if accessor_fields.is_empty() {
-        let e = Error::custom("need at least one field with 'accessor = MyAccessor'");
+        let e = Error::custom("need at least one field with 'accessor(MyAccessor)'");
         return e.write_errors().into();
     }
-    eprintln!("AAAA accessor fields: {accessor_fields:?}");
 
     let mut outputs = Vec::new();
     for accessor_field in accessor_fields {
@@ -81,27 +74,29 @@ pub fn derive_intrusive_linked_list(item: TokenStream) -> TokenStream {
         let acc_id = acc_meta.tokens;
 
         outputs.push(quote! {
-        #vis struct #acc_id;
+            #[automatically_derived]
+            #vis struct #acc_id;
+            #[automatically_derived]
             impl IntrusiveListAccessor<#struct_id> for #acc_id {
-                fn get_node(item: &Foo) -> &ListLink {
+                fn get_node(item: &#struct_id) -> &ListLink {
                     &item.#acc_field
                 }
 
-                fn get_node_mut(item: &mut Foo) -> &mut ListLink {
+                fn get_node_mut(item: &mut #struct_id) -> &mut ListLink {
                     &mut item.#acc_field
                 }
 
-                unsafe fn from_node(node: &ListLink) -> &Foo {
-                    let offset = std::mem::offset_of!(Foo, #acc_field);
+                unsafe fn from_node(node: &ListLink) -> &#struct_id {
+                    let offset = std::mem::offset_of!(#struct_id, #acc_field);
                     let p_node = node as *const _ as *const u8;
-                    let p_struct = unsafe { p_node.sub(offset) } as *const Foo;
+                    let p_struct = unsafe { p_node.sub(offset) } as *const #struct_id;
                     unsafe { &*p_struct }
                 }
 
-                unsafe fn from_node_mut(node: &mut ListLink) -> &mut Foo {
-                    let offset = std::mem::offset_of!(Foo, #acc_field);
+                unsafe fn from_node_mut(node: &mut ListLink) -> &mut #struct_id {
+                    let offset = std::mem::offset_of!(#struct_id, #acc_field);
                     let p_node = node as *const _ as *const u8;
-                    let p_struct = unsafe { p_node.sub(offset) } as *mut Foo;
+                    let p_struct = unsafe { p_node.sub(offset) } as *mut #struct_id;
                     unsafe { &mut *p_struct }
                 }
             }
@@ -118,6 +113,9 @@ pub fn derive_intrusive_linked_list(item: TokenStream) -> TokenStream {
         }
         t
     };
-    eprintln!("AAAA output: {output}");
+    #[cfg(debug_assertions)]
+    println!(
+        "datastructurs_ill_proc_macro: The following code was generated:\n=====\n{output}\n=====\n"
+    );
     output.into()
 }
