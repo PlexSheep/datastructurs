@@ -7,6 +7,8 @@ mod impls;
 
 pub use datastructurs_macros::IntoIntrusiveList;
 
+use crate::trace;
+
 #[derive(PartialEq, Eq, Clone, Copy, Hash)]
 pub struct ListLink {
     next: OpNodePtr,
@@ -128,7 +130,9 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
 
     pub fn remove(&mut self, item: &mut T) {
         let node = A::get_node_mut(item);
-        assert!(node.is_linked(), "Item is not in a list");
+        if !node.is_linked() {
+            trace!("Node has no links, may be faulty or may be root")
+        }
 
         if let Some(mut prev) = node.prev {
             unsafe { prev.as_mut().next = node.next }
