@@ -227,7 +227,7 @@ fn test_vec_large_data() {
 
 #[test]
 fn test_vec_string_operations() {
-    let mut v = Vec::new();
+    let mut v = vec![];
     let strings = vec!["hello", "world", "rust", "is", "awesome"];
 
     for s in &strings {
@@ -244,4 +244,16 @@ fn test_vec_string_operations() {
 fn test_vec_debug_repr() {
     let v = Vec::from(&[19, 1, 24, 13, 25, 25][..]);
     assert_eq!(format!("{v:?}"), "[19, 1, 24, 13, 25, 25]")
+}
+
+#[test]
+fn test_vec_macro() {
+    let v = vec![1, 2, 3, 4, 5];
+    for i in 0..5 {
+        assert_eq!(i + 1, v[i])
+    }
+    drop(v);
+    let a = vec![1, 1, 1, 1, 1, 1];
+    let b = vec![1; 6];
+    assert_eq!(a, b)
 }

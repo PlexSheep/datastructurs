@@ -176,5 +176,31 @@ impl<T> Vec<T> {
     }
 }
 
+impl<T: Clone> Vec<T> {
+    pub fn from_elem(value: T, n: usize) -> Self {
+        let mut v = Vec::with_capacity(n);
+        v.extend_with(value, n);
+        v
+    }
+    pub fn extend_with(&mut self, value: T, n: usize) {
+        // PERF: primitive implementation
+        for _ in 0..n {
+            self.push(value.clone());
+        }
+    }
+}
+
+macro_rules! vec {
+    () => {
+        Vec::new()
+    };
+    ($elem:expr; $n:expr) => (
+        $crate::vec::Vec::from_elem($elem, $n)
+    );
+    ($($x:expr),+ $(,)?) => (
+        $crate::vec::Vec::from_slice(&[$($x,)+])
+    );
+}
+
 #[cfg(test)]
 mod tests;
