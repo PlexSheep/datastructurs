@@ -301,7 +301,7 @@ impl<T: Debug, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
         });
 
         loop {
-            writeln!(&mut buf, "\t{current_node:?}").unwrap();
+            writeln!(&mut buf, "\t{}", self.debug_node(current_node)).unwrap();
 
             match current_node.next {
                 None => break,
@@ -315,6 +315,12 @@ impl<T: Debug, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
             }
         }
         write!(&mut buf, "}}").unwrap();
+        buf
+    }
+
+    pub fn debug_node(&self, node: &ListLink) -> String {
+        let mut buf = "Node: {".to_string();
+        write!(&mut buf, " {:?}", unsafe { A::from_node(node) }).unwrap();
         buf
     }
 }
