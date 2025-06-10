@@ -15,7 +15,7 @@ keywords = ["datastructures"]
 [dependencies]
 
 [workspace]
-members = ["crates/btree_cinema", "."]
+members = ["crates/btree_cinema", ".", "crates/datastructurs-macros"]
 default-members = ["."]
 
 [workspace.dependencies]
