@@ -5,6 +5,8 @@ use impls::{Iter, IterMut};
 
 mod impls;
 
+pub use datastructurs_macros::IntoIntrusiveList;
+
 #[derive(PartialEq, Eq, Clone, Copy, Hash)]
 pub struct ListLink {
     next: OpNodePtr,

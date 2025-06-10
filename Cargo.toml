@@ -13,6 +13,7 @@ keywords = ["datastructures"]
 
 
 [dependencies]
+datastructurs-macros = {path = "./crates/datastructurs-macros/"}
 
 [workspace]
 members = ["crates/btree_cinema", ".", "crates/datastructurs-macros"]

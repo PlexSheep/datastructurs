@@ -1,6 +1,8 @@
 use std::mem::offset_of;
 
-use crate::intrusive_linked_list::{IntrusiveList, IntrusiveListAccessor, ListLink};
+use crate::intrusive_linked_list::{
+    IntoIntrusiveList, IntrusiveList, IntrusiveListAccessor, ListLink,
+};
 use crate::{vec, vec::Vec};
 
 #[test]
@@ -46,6 +48,48 @@ fn test_ill_manual_impl_basic() {
     }
     // impls done
 
+    type List = IntrusiveList<Foo, FooAcc>;
+    let mut list = List::new();
+    let mut foos = vec![];
+    for i in 0..19 {
+        foos.push(Foo::new(i));
+    }
+    for foo in foos.iter_mut().step_by(2) {
+        list.push_back(foo);
+    }
+    for foo in foos.iter_mut().skip(1).step_by(2) {
+        list.push_back(foo);
+    }
+    for foo in foos.iter() {
+        assert!(list.contains(foo))
+    }
+    println!("{}", list.debug_nodes());
+    let elem_to_remove = &mut foos[5];
+    dbg!(&elem_to_remove);
+    dbg!(elem_to_remove.link.is_linked());
+    assert!(list.contains(elem_to_remove));
+    list.remove(elem_to_remove);
+    assert!(!list.contains(elem_to_remove))
+}
+
+#[test]
+fn test_ill_manual_impl_proc_macro() {
+    #[derive(PartialEq, Debug, IntoIntrusiveList)]
+    struct Foo {
+        data: i32,
+        name: String,
+        #[accessor(FooAcc)]
+        link: ListLink,
+    }
+    impl Foo {
+        fn new(id: i32) -> Self {
+            Foo {
+                data: id,
+                name: format!("Foo{id}"),
+                link: Default::default(),
+            }
+        }
+    }
     type List = IntrusiveList<Foo, FooAcc>;
     let mut list = List::new();
     let mut foos = vec![];
