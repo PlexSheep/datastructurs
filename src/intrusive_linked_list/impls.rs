@@ -5,7 +5,11 @@ use super::*;
 
 impl<A: IntrusiveListAccessor<T>, T> Drop for IntrusiveList<T, A> {
     fn drop(&mut self) {
-        self.clear();
+        for item in self.iter_mut() {
+            let node = A::get_node_mut(item);
+            node.prev = None;
+            node.next = None;
+        }
     }
 }
 
