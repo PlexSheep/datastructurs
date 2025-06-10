@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, VecDeque},
-    ops::SubAssign,
+    ops::{AddAssign, SubAssign},
     sync::{Arc, RwLock},
     thread::{self, JoinHandle},
 };
@@ -8,10 +8,13 @@ use std::{
 use datastructurs::intrusive_linked_list::{IntrusiveList, ListLink};
 use datastructurs_macros::IntoIntrusiveList;
 
+#[derive(Debug)]
 struct State {
     name: String,
     fun_number: i64,
 }
+
+const POW_2_31: i64 = 2i64.pow(31);
 
 type SharedState = Arc<RwLock<State>>;
 type Result<T> = std::result::Result<T, String>;
@@ -29,6 +32,7 @@ struct Task<T> {
     link_priority: ListLink,
 }
 
+#[derive(Debug)]
 struct WorkProvider<Res> {
     state: SharedState,
     results: HashMap<usize, Result<Res>>,
@@ -60,7 +64,7 @@ impl<Res: Send + Sync + 'static> WorkProvider<Res> {
         };
         let shared_wp = Arc::new(RwLock::new(wp));
 
-        for tid in 0..2 {
+        for tid in 0..4 {
             let wp = shared_wp.clone();
             shared_wp.write().unwrap().threads.push(
                 thread::Builder::new()
@@ -97,11 +101,18 @@ impl<Res: Send + Sync + 'static> WorkProvider<Res> {
     }
 
     fn get_work(&mut self) -> Option<&mut Task<Res>> {
+        let rlen = self.list_ready.len();
+        let plen = self.list_priority.len();
+        // BUG: pop sometimes returns None even if there are elements inside?!
         if let Some(prio_job) = self.list_priority.pop_front() {
+            self.list_ready.remove(prio_job);
             Some(prio_job)
         } else if let Some(job) = self.list_ready.pop_front() {
             Some(job)
         } else {
+            trace!("list_ready and list_priority were empty!");
+            debug_assert_eq!(rlen, 0, "They were not actually empty!");
+            debug_assert_eq!(plen, 0, "They were not actually empty!");
             None
         }
     }
@@ -121,7 +132,7 @@ impl<Res: Send + Sync + 'static> WorkProvider<Res> {
     }
 
     pub fn keep_running(&self) -> bool {
-        true
+        !self.is_done()
     }
 
     pub fn get_state(&self) -> SharedState {
@@ -136,11 +147,13 @@ impl<Res: Send + Sync + 'static> WorkProvider<Res> {
         }
 
         while wp.read().unwrap().keep_running() {
-            thread_trace!("Getting work");
             let mut wp_lock = wp.write().unwrap();
+            thread_trace!("Getting work");
             let task = match wp_lock.get_work() {
-                Some(stuff) => stuff,
-                None => {
+                Some(task) if task.work.is_some() => task,
+                _ => {
+                    drop(wp_lock);
+                    thread_trace!("No work available");
                     std::thread::sleep(std::time::Duration::from_millis(20));
                     continue;
                 }
@@ -174,44 +187,69 @@ where
     Box::new(f)
 }
 
-fn shit_rng(mut seed: i64) -> i64 {
-    seed ^= 19314809;
-    seed ^ 41752021957
+fn shit_rng(seed: i64) -> i64 {
+    (65539 * seed) % POW_2_31
 }
 
 fn main() {
     let wp: Arc<RwLock<WorkProvider<f64>>> = WorkProvider::new();
 
-    for i in 0..10 {
-        if i % 19 == 0 {
-            wp.write().unwrap().add_work(
-                new_work(|state| {
-                    let mut state = state.write().unwrap();
-                    state.fun_number = state.fun_number.wrapping_mul(13);
-                    state.fun_number.sub_assign(3);
-                    Ok(state.fun_number as f64)
-                }),
-                true,
-            );
-        } else {
-            wp.write().unwrap().add_work(
-                new_work(|state| {
-                    let state = state.read().unwrap();
-                    Ok(shit_rng(state.fun_number) as f64 / 18.4)
-                }),
-                true,
-            );
-        }
+    println!("Set up work");
+    for i in 0..40 {
+        queue_work(i, wp.clone());
     }
+    // trace!("{}", wp.read().unwrap().list_ready.debug_nodes());
 
     println!("Waiting for completion");
+    let mut i = 0;
     while !wp.read().unwrap().is_done() {
         std::thread::sleep(std::time::Duration::from_millis(40));
+        if i % 10 == 0 {
+            // queue_work(i, wp.clone());
+            trace!("work ready: {}", wp.read().unwrap().list_ready.len());
+        }
+        i += 1;
     }
 
     println!("{:=^80}", "RESULTS");
     for (id, res) in wp.read().unwrap().results.iter() {
         println!("{id:06} | {res:?}")
+    }
+}
+
+fn queue_work(i: usize, wp: Arc<RwLock<WorkProvider<f64>>>) {
+    if i % 19 == 0 {
+        wp.write().unwrap().add_work(
+            new_work(|state| {
+                let mut state = state.write().unwrap();
+                state.fun_number = state.fun_number.wrapping_mul(13);
+                state.fun_number.sub_assign(3);
+                Ok(state.fun_number as f64)
+            }),
+            true,
+        );
+    } else {
+        wp.write().unwrap().add_work(
+            new_work(|state| {
+                let mut state_lock = state.write().unwrap();
+                state_lock.fun_number.add_assign(1);
+                drop(state_lock);
+                Ok(shit_rng(state.read().unwrap().fun_number) as f64 / 18.4)
+            }),
+            true,
+        );
+    }
+}
+
+impl<T> std::fmt::Debug for Task<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Task")
+            .field("id", &self.id)
+            .field("work", &self.work.is_some())
+            .field("link_ready", &self.link_ready)
+            .field("link_in_progress", &self.link_in_progress)
+            .field("link_priority", &self.link_priority)
+            .finish()
     }
 }
 
