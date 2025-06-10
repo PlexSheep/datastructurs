@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Write};
 use std::{marker::PhantomData, ptr::NonNull};
 
 use impls::{Iter, IterMut};
@@ -286,6 +287,35 @@ impl<A: IntrusiveListAccessor<T>, T: PartialEq> IntrusiveList<T, A> {
             }
         }
         false
+    }
+}
+
+impl<T: Debug, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
+    pub fn debug_nodes(&self) -> String {
+        let mut buf = "LinkedList: {\n".to_string();
+        let mut current_node = deref_node(match self.head {
+            Some(h) => h,
+            None => {
+                return "(No head)".to_string();
+            }
+        });
+
+        loop {
+            writeln!(&mut buf, "\t{current_node:?}").unwrap();
+
+            match current_node.next {
+                None => break,
+                Some(p_next) => {
+                    if p_next == self.head.unwrap() {
+                        // reached end
+                        break;
+                    };
+                    current_node = deref_node(p_next)
+                }
+            }
+        }
+        write!(&mut buf, "}}").unwrap();
+        buf
     }
 }
 

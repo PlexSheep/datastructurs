@@ -5,7 +5,7 @@ use crate::{vec, vec::Vec};
 
 #[test]
 fn test_ill_manual_impl_basic() {
-    #[derive(PartialEq)]
+    #[derive(PartialEq, Debug)]
     struct Foo {
         data: i32,
         name: String,
@@ -61,4 +61,7 @@ fn test_ill_manual_impl_basic() {
     for foo in foos.iter() {
         assert!(list.contains(foo))
     }
+    println!("{}", list.debug_nodes());
+    list.remove(&mut foos[5]);
+    assert!(!list.contains(&foos[5]))
 }
