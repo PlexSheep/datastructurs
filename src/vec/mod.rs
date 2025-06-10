@@ -190,6 +190,7 @@ impl<T: Clone> Vec<T> {
     }
 }
 
+#[macro_export]
 macro_rules! vec {
     () => {
         Vec::new()

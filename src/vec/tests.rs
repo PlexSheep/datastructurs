@@ -227,7 +227,7 @@ fn test_vec_large_data() {
 
 #[test]
 fn test_vec_string_operations() {
-    let mut v = vec![];
+    let mut v: crate::vec::Vec<_> = vec![];
     let strings = vec!["hello", "world", "rust", "is", "awesome"];
 
     for s in &strings {
