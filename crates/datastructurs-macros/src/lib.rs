@@ -19,6 +19,7 @@ struct DataField {
     attrs: Vec<syn::Attribute>,
 }
 
+#[allow(unused)]
 macro_rules! trace {
     ($($stuff:tt)+) => {
         println!("datastructu_rs::{}::{}: {}", file!(), line!(),format_args!($($stuff)+))
@@ -33,6 +34,7 @@ macro_rules! trace {
 )]
 struct DataStruct {
     ident: Ident,
+    generics: syn::Generics,
     data: darling::ast::Data<Ignored /* idc about enums */, DataField>,
 }
 
@@ -46,6 +48,7 @@ pub fn derive_intrusive_linked_list(item: TokenStream) -> TokenStream {
         }
     };
     let struct_id = opts.ident;
+    let struct_generics = opts.generics;
     let fields = match opts.data.take_struct() {
         Some(f) => f,
         None => {
@@ -92,29 +95,29 @@ pub fn derive_intrusive_linked_list(item: TokenStream) -> TokenStream {
         let acc_id = acc_meta.tokens;
 
         outputs.push(quote! {
-            #[automatically_derived]
             #vis struct #acc_id;
-            #[automatically_derived]
-            impl datastructurs::intrusive_linked_list::IntrusiveListAccessor<#struct_id> for #acc_id {
-                fn get_node(item: &#struct_id) -> &datastructurs::intrusive_linked_list::ListLink {
-                    &item.#acc_field
+            impl #struct_generics datastructurs::intrusive_linked_list::IntrusiveListAccessor< #struct_id #struct_generics> for #acc_id {
+                fn get_node(item: & #struct_id #struct_generics) -> &datastructurs::intrusive_linked_list::ListLink {
+                    &item. #acc_field
                 }
 
-                fn get_node_mut(item: &mut #struct_id) -> &mut datastructurs::intrusive_linked_list::ListLink {
-                    &mut item.#acc_field
+                fn get_node_mut(item: &mut  #struct_id #struct_generics) -> &mut datastructurs::intrusive_linked_list::ListLink {
+                    &mut item. #acc_field
                 }
 
-                unsafe fn from_node(node: &datastructurs::intrusive_linked_list::ListLink) -> &#struct_id {
-                    let offset = std::mem::offset_of!(#struct_id, #acc_field);
+                unsafe fn from_node(node: &datastructurs::intrusive_linked_list::ListLink) -> & #struct_id #struct_generics {
+                    let offset = std::mem::offset_of!( #struct_id #struct_generics,  #acc_field);
                     let p_node = node as *const _ as *const u8;
-                    let p_struct = unsafe { p_node.sub(offset) } as *const #struct_id;
+                    let p_struct = unsafe { p_node.sub(offset) } as *const  #struct_id #struct_generics;
                     unsafe { &*p_struct }
                 }
 
-                unsafe fn from_node_mut(node: &mut datastructurs::intrusive_linked_list::ListLink) -> &mut #struct_id {
-                    let offset = std::mem::offset_of!(#struct_id, #acc_field);
+                unsafe fn from_node_mut(
+                    node: &mut datastructurs::intrusive_linked_list::ListLink,
+                ) -> &mut  #struct_id #struct_generics {
+                    let offset = std::mem::offset_of!( #struct_id #struct_generics,  #acc_field);
                     let p_node = node as *const _ as *const u8;
-                    let p_struct = unsafe { p_node.sub(offset) } as *mut #struct_id;
+                    let p_struct = unsafe { p_node.sub(offset) } as *mut  #struct_id #struct_generics;
                     unsafe { &mut *p_struct }
                 }
             }
