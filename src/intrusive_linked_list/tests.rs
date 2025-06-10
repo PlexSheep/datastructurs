@@ -3,6 +3,7 @@ use std::mem::offset_of;
 use crate::intrusive_linked_list::{
     IntoIntrusiveList, IntrusiveList, IntrusiveListAccessor, ListLink,
 };
+use crate::trace;
 use crate::{vec, vec::Vec};
 
 #[test]
@@ -63,7 +64,7 @@ fn test_ill_manual_impl_basic() {
     for foo in foos.iter() {
         assert!(list.contains(foo))
     }
-    println!("{}", list.debug_nodes());
+    trace!("{}", list.debug_nodes());
     let elem_to_remove = &mut foos[5];
     dbg!(&elem_to_remove);
     dbg!(elem_to_remove.link.is_linked());
@@ -107,7 +108,7 @@ fn test_ill_manual_impl_proc_macro() {
     for foo in foos.iter() {
         assert!(list.contains(foo))
     }
-    println!("{}", list.debug_nodes());
+    trace!("{}", list.debug_nodes());
     let elem_to_remove = &mut foos[5];
     dbg!(&elem_to_remove);
     dbg!(elem_to_remove.link.is_linked());
@@ -138,8 +139,7 @@ fn test_ill_basic_derive() {
     }
 
     dbg!(&datastore);
-    println!("{}", list.debug_nodes());
-
+    trace!("{}", list.debug_nodes());
     for i in 0..22 {
         assert_eq!(list[i].bi, i as f32)
     }

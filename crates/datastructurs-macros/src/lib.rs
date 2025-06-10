@@ -19,6 +19,12 @@ struct DataField {
     attrs: Vec<syn::Attribute>,
 }
 
+macro_rules! trace {
+    ($($stuff:tt)+) => {
+        println!("datastructu_rs::{}::{}: {}", file!(), line!(),format_args!($($stuff)+))
+    };
+}
+
 #[derive(FromDeriveInput, Debug)]
 #[darling(
     attributes(IntoIntrusiveList, accessor),
@@ -114,7 +120,7 @@ pub fn derive_intrusive_linked_list(item: TokenStream) -> TokenStream {
         t
     };
     #[cfg(debug_assertions)]
-    println!(
+    trace!(
         "datastructurs_ill_proc_macro: The following code was generated:\n=====\n{output}\n=====\n"
     );
     output.into()

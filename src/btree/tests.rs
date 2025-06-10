@@ -1,3 +1,5 @@
+use crate::trace;
+
 use super::*;
 
 #[test]
@@ -132,8 +134,8 @@ fn test_btree_stress() {
     for d in range.clone() {
         tree.insert(d);
     }
-    println!("Tree height: {}", tree.height());
-    println!("Tree len: {}", tree.len());
+    trace!("Tree height: {}", tree.height());
+    trace!("Tree len: {}", tree.len());
 
     for key in range.clone() {
         assert!(tree.contains(&key))
@@ -346,8 +348,8 @@ fn test_btree_height_characteristics() {
     assert!(height > 0);
     assert!(height < 10); // Should be quite shallow with branch factor 100
 
-    println!("Tree with 1000 elements has height: {}", height);
-    println!("Tree has {} nodes", tree.node_count());
+    trace!("Tree with 1000 elements has height: {}", height);
+    trace!("Tree has {} nodes", tree.node_count());
 }
 
 #[test]
@@ -408,7 +410,7 @@ fn test_btree_different_branch_factors() {
         let collected: std::vec::Vec<_> = tree.iter().cloned().collect();
         assert_eq!(collected, data);
 
-        println!(
+        trace!(
             "Branch factor {}: height = {}, nodes = {}",
             branch_factor,
             tree.height(),
@@ -462,7 +464,7 @@ fn test_btree_memory_intensive() {
     let expected = (0..100).collect::<std::vec::Vec<_>>();
     assert_eq!(first_100, expected);
 
-    println!(
+    trace!(
         "Large tree stats: height = {}, nodes = {}",
         tree.height(),
         tree.node_count()

@@ -3,6 +3,8 @@ use std::{
     ptr::NonNull,
 };
 
+use crate::trace;
+
 #[derive(Clone)]
 pub(crate) struct RawVec<T> {
     pub(crate) ptr: NonNull<T>,
@@ -20,6 +22,10 @@ impl<T> RawVec<T> {
     // See rustonomicon, chapter 9.2
     pub(crate) fn grow_by(&mut self, added_capacity: usize) {
         let new_cap = self.capacity + added_capacity;
+        trace!(
+            "growing raw_vec at {:?} from {} to {}",
+            self.ptr, self.capacity, new_cap
+        );
         // `Layout::array` checks that the number of bytes is <= usize::MAX,
         // but this is redundant since old_layout.size() <= isize::MAX,
         // so the `unwrap` should never fail.
