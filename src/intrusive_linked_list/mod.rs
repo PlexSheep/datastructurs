@@ -222,12 +222,12 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
 
     #[must_use]
     pub(crate) fn get_node(&self, index: usize) -> Option<&ListLink> {
-        self.find_node(index).map(|p| deref_node(p))
+        self.find_node(index).map(deref_node)
     }
 
     #[must_use]
     pub(crate) fn get_node_mut(&mut self, index: usize) -> Option<&mut ListLink> {
-        self.find_node(index).map(|p| deref_node_mut(p))
+        self.find_node(index).map(deref_node_mut)
     }
 
     #[must_use]
