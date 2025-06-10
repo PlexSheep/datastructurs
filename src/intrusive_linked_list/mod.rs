@@ -26,8 +26,9 @@ pub trait IntrusiveListAccessor<T> {
 }
 
 pub struct IntrusiveList<T, A: IntrusiveListAccessor<T>> {
-    head: OpNodePtr,
-    tail: OpNodePtr,
+    // TODO: make these private again
+    pub head: OpNodePtr,
+    pub tail: OpNodePtr,
     len: usize,
     marker: PhantomData<(T, A)>,
 }
@@ -128,10 +129,11 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
         }
     }
 
-    pub fn remove(&mut self, item: &mut T) {
+    pub fn remove<'a>(&'a mut self, item: &'a mut T) -> Option<&'a mut T> {
         let node = A::get_node_mut(item);
-        if !node.is_linked() {
-            trace!("Node has no links, may be faulty or may be root")
+        if !node.is_linked() && !self.head.is_some_and(|head| deref_node(head) == node) {
+            trace!("A completely foreign node was passed into remove!");
+            return None;
         }
 
         if let Some(mut prev) = node.prev {
@@ -149,18 +151,31 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
         node.prev = None;
         node.next = None;
         self.len -= 1;
+        Some(item)
     }
 
     pub fn pop_front(&mut self) -> Option<&mut T> {
-        let item = unsafe { A::from_node_mut(deref_node_mut(self.head?)) };
-        self.remove(item);
-        Some(item)
+        if self.is_empty() {
+            return None;
+        }
+        let item = unsafe {
+            A::from_node_mut(deref_node_mut(
+                self.head.expect("list not empty but head is none"),
+            ))
+        };
+        self.remove(item)
     }
 
     pub fn pop_back(&mut self) -> Option<&mut T> {
-        let item = unsafe { A::from_node_mut(deref_node_mut(self.tail?)) };
-        self.remove(item);
-        Some(item)
+        if self.is_empty() {
+            return None;
+        }
+        let item = unsafe {
+            A::from_node_mut(deref_node_mut(
+                self.tail.expect("list not empty but tail is none"),
+            ))
+        };
+        self.remove(item)
     }
 
     pub fn clear(&mut self) {

@@ -26,8 +26,6 @@ struct Task<T> {
     work: Option<WorkItem<T>>,
     #[accessor(AccReady)]
     link_ready: ListLink,
-    #[accessor(AccProgress)]
-    link_in_progress: ListLink,
     #[accessor(AccPrio)]
     link_priority: ListLink,
 }
@@ -38,7 +36,6 @@ struct WorkProvider<Res> {
     results: HashMap<usize, Result<Res>>,
     threads: Vec<JoinHandle<Result<()>>>,
     list_priority: IntrusiveList<Task<Res>, AccPrio>,
-    list_in_progress: IntrusiveList<Task<Res>, AccProgress>,
     list_ready: IntrusiveList<Task<Res>, AccReady>,
     tasks: VecDeque<Task<Res>>,
     next_id: usize,
@@ -58,13 +55,12 @@ impl<Res: Send + Sync + 'static> WorkProvider<Res> {
             results,
             threads: Vec::new(),
             list_priority: Default::default(),
-            list_in_progress: Default::default(),
             list_ready: Default::default(),
             next_id: Default::default(),
         };
         let shared_wp = Arc::new(RwLock::new(wp));
 
-        for tid in 0..4 {
+        for tid in 0..1 {
             let wp = shared_wp.clone();
             shared_wp.write().unwrap().threads.push(
                 thread::Builder::new()
@@ -78,11 +74,15 @@ impl<Res: Send + Sync + 'static> WorkProvider<Res> {
     }
 
     pub fn add_work(&mut self, work: WorkItem<Res>, priority: bool) {
+        trace!(
+            "Before add: ready.len={}, ready.head={:?}",
+            self.list_ready.len(),
+            self.list_ready.head
+        );
         let id = self.next_id();
         let task = Task {
             id,
             work: Some(work),
-            link_in_progress: Default::default(),
             link_ready: Default::default(),
             link_priority: Default::default(),
         };
@@ -91,6 +91,11 @@ impl<Res: Send + Sync + 'static> WorkProvider<Res> {
         if priority {
             self.list_priority.push_back(&mut self.tasks[0]);
         }
+        trace!(
+            "After add: ready.len={}, ready.head={:?}",
+            self.list_ready.len(),
+            self.list_ready.head
+        );
     }
 
     #[must_use]
@@ -101,16 +106,25 @@ impl<Res: Send + Sync + 'static> WorkProvider<Res> {
     }
 
     fn get_work(&mut self) -> Option<&mut Task<Res>> {
+        trace!(
+            "Before get_work: ready.len={}, ready.head={:?}",
+            self.list_ready.len(),
+            self.list_ready.head
+        );
         let rlen = self.list_ready.len();
         let plen = self.list_priority.len();
+
         // BUG: pop sometimes returns None even if there are elements inside?!
+
         if let Some(prio_job) = self.list_priority.pop_front() {
-            self.list_ready.remove(prio_job);
+            // self.list_ready.remove(prio_job);
+            trace!("get_work: prio=true");
             Some(prio_job)
         } else if let Some(job) = self.list_ready.pop_front() {
+            trace!("get_work: prio=false");
             Some(job)
         } else {
-            trace!("list_ready and list_priority were empty!");
+            trace!("get_work: list_ready and list_priority were empty!");
             debug_assert_eq!(rlen, 0, "They were not actually empty!");
             debug_assert_eq!(plen, 0, "They were not actually empty!");
             None
@@ -123,12 +137,12 @@ impl<Res: Send + Sync + 'static> WorkProvider<Res> {
         }
     }
 
-    pub fn get_results(&self) -> &HashMap<usize, Result<Res>> {
+    pub fn results(&self) -> &HashMap<usize, Result<Res>> {
         &self.results
     }
 
     pub fn is_done(&self) -> bool {
-        self.list_ready.is_empty() && self.list_in_progress.is_empty()
+        self.list_ready.is_empty() && self.threads.iter().all(|th| th.is_finished())
     }
 
     pub fn keep_running(&self) -> bool {
@@ -198,7 +212,7 @@ fn main() {
     for i in 0..40 {
         queue_work(i, wp.clone());
     }
-    // trace!("{}", wp.read().unwrap().list_ready.debug_nodes());
+    trace!("{}", wp.read().unwrap().list_ready.debug_nodes());
 
     println!("Waiting for completion");
     let mut i = 0;
@@ -212,7 +226,7 @@ fn main() {
     }
 
     println!("{:=^80}", "RESULTS");
-    for (id, res) in wp.read().unwrap().results.iter() {
+    for (id, res) in wp.read().unwrap().results().iter() {
         println!("{id:06} | {res:?}")
     }
 }
@@ -247,7 +261,6 @@ impl<T> std::fmt::Debug for Task<T> {
             .field("id", &self.id)
             .field("work", &self.work.is_some())
             .field("link_ready", &self.link_ready)
-            .field("link_in_progress", &self.link_in_progress)
             .field("link_priority", &self.link_priority)
             .finish()
     }
