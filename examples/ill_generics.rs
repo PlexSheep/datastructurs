@@ -154,9 +154,16 @@ impl<Res: Send + Sync + 'static> WorkProvider<Res> {
     }
 
     fn worker_thread_main(wp: Arc<RwLock<WorkProvider<Res>>>, tid: usize) -> Result<()> {
+        #[cfg(debug_assertions)]
         macro_rules! thread_trace {
             ($($stuff:tt)+) => {
                 println!("datastructu_rs::{}::{}::t{tid}: {}", file!(), line!(),format_args!($($stuff)+))
+            };
+        }
+        #[cfg(not(debug_assertions))]
+        macro_rules! thread_trace {
+            ($($stuff:tt)+) => {
+                ()
             };
         }
 

@@ -136,20 +136,29 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
             return None;
         }
 
+        // BUG: sometimes, head is set to none even though the element being removed is not the
+        // last one
         if let Some(mut prev) = node.prev {
             unsafe { prev.as_mut().next = node.next }
-        } else {
+        } else if self.head == Some(node.as_ptr()) {
             self.head = node.next
         }
 
         if let Some(mut next) = node.next {
             unsafe { next.as_mut().prev = node.prev }
-        } else {
+        } else if self.tail == Some(node.as_ptr()) {
             self.tail = node.prev
         }
 
         node.prev = None;
         node.next = None;
+
+        #[cfg(debug_assertions)]
+        {
+            debug_assert!(self.head.is_some());
+            debug_assert!(self.tail.is_some());
+        }
+
         self.len -= 1;
         Some(item)
     }
