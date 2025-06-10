@@ -134,6 +134,5 @@ pub fn derive_intrusive_linked_list(item: TokenStream) -> TokenStream {
         }
         t
     };
-    #[cfg(debug_assertions)]
     output.into()
 }
