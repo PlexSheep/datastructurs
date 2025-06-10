@@ -298,5 +298,4 @@ fn deref_node_mut<'a>(p: NodePtr) -> &'a mut ListLink {
     unsafe { &mut *p.as_ptr() }
 }
 
-#[cfg(test)]
-mod tests;
+// tests are external to make use of the proc macro
