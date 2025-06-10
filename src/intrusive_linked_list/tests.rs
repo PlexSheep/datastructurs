@@ -62,6 +62,10 @@ fn test_ill_manual_impl_basic() {
         assert!(list.contains(foo))
     }
     println!("{}", list.debug_nodes());
-    list.remove(&mut foos[5]);
-    assert!(!list.contains(&foos[5]))
+    let elem_to_remove = &mut foos[5];
+    dbg!(&elem_to_remove);
+    dbg!(elem_to_remove.link.is_linked());
+    assert!(list.contains(elem_to_remove));
+    list.remove(elem_to_remove);
+    assert!(!list.contains(elem_to_remove))
 }
