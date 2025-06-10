@@ -280,7 +280,7 @@ impl<T: Debug, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
 
     pub fn debug_node(&self, node: &ListLink) -> String {
         let mut buf = "Node: {".to_string();
-        write!(&mut buf, " {:?}", unsafe { A::from_node(node) }).unwrap();
+        write!(&mut buf, " {:?} }}", unsafe { A::from_node(node) }).unwrap();
         buf
     }
 }
