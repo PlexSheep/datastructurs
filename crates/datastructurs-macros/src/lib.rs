@@ -132,8 +132,5 @@ pub fn derive_intrusive_linked_list(item: TokenStream) -> TokenStream {
         t
     };
     #[cfg(debug_assertions)]
-    trace!(
-        "datastructurs_ill_proc_macro: The following code was generated:\n=====\n{output}\n=====\n"
-    );
     output.into()
 }

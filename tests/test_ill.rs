@@ -1,6 +1,4 @@
-use datastructurs::intrusive_linked_list::{
-    IntoIntrusiveList, IntrusiveList, IntrusiveListAccessor, ListLink,
-};
+use datastructurs::intrusive_linked_list::{IntoIntrusiveList, IntrusiveList, ListLink};
 use datastructurs::trace;
 use datastructurs::vec::Vec;
 
