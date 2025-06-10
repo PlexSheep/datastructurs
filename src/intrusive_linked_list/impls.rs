@@ -3,15 +3,15 @@ use std::ops::{Index, IndexMut};
 
 use super::*;
 
-impl<A: IntrusiveListAccessor<T>, T> Drop for IntrusiveList<T, A> {
-    fn drop(&mut self) {
-        for item in self.iter_mut() {
-            let node = A::get_node_mut(item);
-            node.prev = None;
-            node.next = None;
-        }
-    }
-}
+// impl<A: IntrusiveListAccessor<T>, T> Drop for IntrusiveList<T, A> {
+//     fn drop(&mut self) {
+//         for item in self.iter_mut() {
+//             let node = A::get_node_mut(item);
+//             node.prev = None;
+//             node.next = None;
+//         }
+//     }
+// }
 
 impl<A: IntrusiveListAccessor<T>, T> IndexMut<usize> for IntrusiveList<T, A> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
