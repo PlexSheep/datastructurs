@@ -14,7 +14,7 @@ fn test_ill_manual_impl_basic() {
     impl Foo {
         fn new(id: i32) -> Self {
             Foo {
-                data: 1,
+                data: id,
                 name: format!("Foo{id}"),
                 link: Default::default(),
             }
