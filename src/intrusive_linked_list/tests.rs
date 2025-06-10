@@ -1,0 +1,64 @@
+use std::mem::offset_of;
+
+use crate::intrusive_linked_list::{IntrusiveList, IntrusiveListAccessor, ListLink};
+use crate::{vec, vec::Vec};
+
+#[test]
+fn test_ill_manual_impl_basic() {
+    #[derive(PartialEq)]
+    struct Foo {
+        data: i32,
+        name: String,
+        link: ListLink,
+    }
+    impl Foo {
+        fn new(id: i32) -> Self {
+            Foo {
+                data: 1,
+                name: format!("Foo{id}"),
+                link: Default::default(),
+            }
+        }
+    }
+    struct FooAcc;
+    impl IntrusiveListAccessor<Foo> for FooAcc {
+        fn get_node(item: &Foo) -> &ListLink {
+            &item.link
+        }
+
+        fn get_node_mut(item: &mut Foo) -> &mut ListLink {
+            &mut item.link
+        }
+
+        unsafe fn from_node(node: &ListLink) -> &Foo {
+            let offset = offset_of!(Foo, link);
+            let p_node = node as *const _ as *const u8;
+            let p_struct = unsafe { p_node.sub(offset) } as *const Foo;
+            unsafe { &*p_struct }
+        }
+
+        unsafe fn from_node_mut(node: &mut ListLink) -> &mut Foo {
+            let offset = offset_of!(Foo, link);
+            let p_node = node as *const _ as *const u8;
+            let p_struct = unsafe { p_node.sub(offset) } as *mut Foo;
+            unsafe { &mut *p_struct }
+        }
+    }
+    // impls done
+
+    type List = IntrusiveList<Foo, FooAcc>;
+    let mut list = List::new();
+    let mut foos = vec![];
+    for i in 0..19 {
+        foos.push(Foo::new(i));
+    }
+    for foo in foos.iter_mut().step_by(2) {
+        list.push_back(foo);
+    }
+    for foo in foos.iter_mut().skip(1).step_by(2) {
+        list.push_back(foo);
+    }
+    for foo in foos.iter() {
+        assert!(list.contains(foo))
+    }
+}
