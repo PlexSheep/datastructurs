@@ -7,6 +7,7 @@ mod impls;
 
 pub use datastructurs_macros::IntoIntrusiveList;
 
+use crate::stable_ref::{StableRef, StableRefMut};
 use crate::trace;
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash)]
@@ -15,6 +16,8 @@ pub struct ListLink {
     prev: OpNodePtr,
 }
 
+pub type ItemMut<'a, T> = StableRefMut<'a, T>;
+pub type ItemRef<'a, T> = StableRef<'a, T>;
 pub(crate) type NodePtr = NonNull<ListLink>;
 pub(crate) type OpNodePtr = Option<NodePtr>;
 
@@ -79,8 +82,9 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
         self.tail = Some(p_node);
     }
 
-    pub fn push_back(&mut self, element: &mut T) {
-        let node = A::get_node_mut(element);
+    pub fn push_back<'a>(&'a mut self, element: impl Into<ItemMut<'a, T>>) {
+        let mut element: ItemMut<T> = element.into();
+        let node = A::get_node_mut(element.as_mut());
 
         match self.tail {
             None => self.link_as_only_node(node.as_ptr()),
@@ -93,8 +97,9 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
         self.len += 1;
     }
 
-    pub fn push_front(&mut self, element: &mut T) {
-        let node = A::get_node_mut(element);
+    pub fn push_front<'a>(&'a mut self, element: impl Into<ItemMut<'a, T>>) {
+        let mut element: ItemMut<T> = element.into();
+        let node = A::get_node_mut(element.as_mut());
 
         match self.head {
             None => self.link_as_only_node(node.as_ptr()),

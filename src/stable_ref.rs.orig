@@ -35,7 +35,7 @@
 //! use datastructurs::stable_ref::StableRefMut;
 //!
 //! let mut boxed = Box::new(42);
-//! let stable = StableRefMut::from_boxref(&mut boxed);
+//! let stable = StableRefMut::from_ref(&mut boxed);
 //! drop(boxed); // ERROR: can't drop the box while it is borrowed by stable
 //! assert_eq!(*stable.as_ref(), 42);
 //! ```
@@ -46,7 +46,7 @@
 //! use datastructurs::stable_ref::StableRefMut;
 //!
 //! let mut boxed = Box::new(42);
-//! let stable = StableRefMut::from_boxref(&mut boxed);
+//! let stable = StableRefMut::from_ref(&mut boxed);
 //! assert_eq!(*stable.as_ref(), 42);
 //! ```
 //!
@@ -116,7 +116,7 @@ pub enum StableRef<'a, T: 'a> {
     /// Owned Box that guarantees a stable heap address.
     Boxed(Box<T>),
     /// Borrowed reference to a Box. The Box can not be dropped while this reference exists
-    BoxRef(&'a Box<T>),
+    Ref(&'a Box<T>),
     /// Raw pointer with manual lifetime management.
     Raw(NonNull<T>),
 }
@@ -134,7 +134,7 @@ pub enum StableRefMut<'a, T: 'a> {
     /// Owned Box that guarantees a stable heap address.
     Boxed(Box<T>),
     /// Borrowed mutable reference to a Box. The Box must outlive this reference.
-    BoxRef(&'a mut Box<T>),
+    Ref(&'a mut Box<T>),
     /// Raw mutable pointer with manual lifetime management.
     Raw(NonNull<T>),
 }
@@ -190,6 +190,7 @@ impl<'a, T> StableRef<'a, T> {
         Self::from_box(bx.into())
     }
 
+<<<<<<< HEAD
     /// Creates a [`StableRef`] that borrows a [Box].
     ///
     /// # Safety
@@ -203,7 +204,7 @@ impl<'a, T> StableRef<'a, T> {
     /// use datastructurs::stable_ref::StableRef;
     ///
     /// let boxed = Box::new(42);
-    /// let stable = StableRef::from_boxref(&boxed);
+    /// let stable = StableRef::from_ref(&boxed);
     /// // boxed cannot be dropped while stable exists
     /// assert_eq!(*stable.as_ref(), 42);
     /// ```
@@ -212,38 +213,34 @@ impl<'a, T> StableRef<'a, T> {
     /// use datastructurs::stable_ref::StableRef;
     ///
     /// let boxed = Box::new(42);
-    /// let stable = StableRef::from_boxref(&boxed);
+    /// let stable = StableRef::from_ref(&boxed);
     /// drop(boxed); // ERROR: boxed cannot be dropped while it is referenced
     /// assert_eq!(*stable.as_ref(), 42);
     /// ```
     #[inline]
-    pub fn from_boxref(r: &'a Box<T>) -> Self {
-        Self::BoxRef(r)
+    pub fn from_ref(r: &'a Box<T>) -> Self {
+        Self::Ref(r)
     }
 
     /// Returns a raw pointer to the referenced value.
     ///
     /// The pointer is valid for the lifetime of this [`StableRef`].
+=======
+    /// Create a [Box] with the value
+    ///
+    /// Uses [`Self::from_box`] internally.
+    pub fn create_box(value: T) -> Self {
+        Self::from_box(Box::new(value))
+    }
+
+    /// Convert the [StableRef] into a raw pointer
+>>>>>>> ee5d44b (refactor: use StableRef for push in intrinsic linked list)
     #[inline]
     pub fn as_ptr(&self) -> NonNull<T> {
         match self {
             Self::Raw(r) => *r,
             Self::Boxed(r) => box_to_raw(r),
-            Self::BoxRef(r) => ref_to_raw(r),
-        }
-    }
-
-    /// Convert the [StableRef] into a [StableRefMut]
-    ///
-    /// # Safety
-    ///
-    /// If [self] is a [`BoxRef`], then this casts a `&T` into `&mut T`.
-    #[inline]
-    pub unsafe fn into_stable_mut(self) -> StableRefMut<'a, T> {
-        match self {
-            StableRef::BoxRef(r) => StableRefMut::BoxRef(unsafe { ref_to_mut(r) }),
-            StableRef::Raw(r) => StableRefMut::Raw(r),
-            StableRef::Boxed(r) => StableRefMut::Boxed(r),
+            Self::Ref(r) => ref_to_raw(r),
         }
     }
 }
@@ -304,6 +301,7 @@ impl<'a, T> StableRefMut<'a, T> {
         Self::from_box(bx.into())
     }
 
+<<<<<<< HEAD
     /// Creates a [`StableRefMut`] that borrows a [Box].
     ///
     /// # Safety
@@ -318,7 +316,7 @@ impl<'a, T> StableRefMut<'a, T> {
     /// use datastructurs::stable_ref::StableRefMut;
     ///
     /// let mut boxed = Box::new(42);
-    /// let stable = StableRefMut::from_boxref(&mut boxed);
+    /// let stable = StableRefMut::from_ref(&mut boxed);
     /// // boxed cannot be dropped while stable exists
     /// assert_eq!(*stable.as_ref(), 42);
     /// ```
@@ -327,41 +325,47 @@ impl<'a, T> StableRefMut<'a, T> {
     /// use datastructurs::stable_ref::StableRefMut;
     ///
     /// let mut boxed = Box::new(42);
-    /// let stable = StableRefMut::from_boxref(&mut boxed);
+    /// let stable = StableRefMut::from_ref(&mut boxed);
     /// drop(boxed); // ERROR: boxed cannot be dropped while it is referenced
     /// assert_eq!(*stable.as_ref(), 42);
     /// ```
     #[inline]
-    pub fn from_boxref(r: &'a mut Box<T>) -> Self {
-        Self::BoxRef(r)
+    pub fn from_ref(r: &'a mut Box<T>) -> Self {
+        Self::Ref(r)
     }
 
     /// Returns a raw pointer to the referenced value.
     ///
     /// The pointer is valid for the lifetime of this [`StableRefMut`].
+=======
+    /// Create a [Box] with the value
+    ///
+    /// Uses [`Self::from_box`] internally.
+    pub fn create_box(value: T) -> Self {
+        Self::from_box(Box::new(value))
+    }
+
+    /// Convert the [StableRefMut] into a raw pointer
+>>>>>>> ee5d44b (refactor: use StableRef for push in intrinsic linked list)
     #[inline]
     pub fn as_ptr(&self) -> NonNull<T> {
         match self {
             Self::Raw(r) => *r,
             Self::Boxed(r) => box_to_raw(r),
-            Self::BoxRef(r) => ref_to_raw(r),
+            Self::Ref(r) => ref_to_raw(r),
         }
     }
 
-    /// Convert a reference to a [StableRefMut] into a [StableRef]
-    ///
-    /// # Safety
-    ///
-    /// [`StableRefMut::Boxed`] becomes a [`StableRef::BoxRef`],
-    /// but this is a safe operation.
     #[inline]
-    pub fn as_stable_ref(&'a self) -> StableRef<'a, T> {
+    pub fn stable_ref(&'a self) -> StableRef<'a, T> {
         match self {
-            Self::Boxed(b) => StableRef::BoxRef(b),
-            Self::BoxRef(b) => StableRef::BoxRef(b),
+            Self::Boxed(b) => StableRef::Ref(b),
+            Self::Ref(r) => StableRef::Raw(box_to_raw(*r)),
             Self::Raw(r) => StableRef::Raw(*r),
         }
     }
+<<<<<<< HEAD
+=======
 
     /// Convert the [StableRefMut] into a [StableRef]
     ///
@@ -385,21 +389,17 @@ impl<'a, T> StableRefMut<'a, T> {
     /// The user must take measures to ensure that no race condition arises
     /// from multiple mutable references existing to the same value.
     #[inline]
-    #[allow(elided_named_lifetimes)]
     pub unsafe fn clone(&'a self) -> StableRefMut<'_, T> {
-        match self {
-            Self::Boxed(b) => Self::BoxRef(unsafe { ref_to_mut(b) }),
-            Self::BoxRef(r) => Self::BoxRef(unsafe { ref_to_mut(*r) }),
-            Self::Raw(r) => Self::Raw(*r),
-        }
+        unsafe { self.as_stable_ref().into_stable_mut() }
     }
+>>>>>>> ee5d44b (refactor: use StableRef for push in intrinsic linked list)
 }
 
 impl<'a, T> AsRef<T> for StableRef<'a, T> {
     fn as_ref(&self) -> &T {
         match self {
             Self::Boxed(bx) => bx,
-            Self::BoxRef(r) => r,
+            Self::Ref(r) => r,
             Self::Raw(ptr) => unsafe { ptr.as_ref() },
         }
     }
@@ -409,7 +409,7 @@ impl<'a, T> AsRef<T> for StableRefMut<'a, T> {
     fn as_ref(&self) -> &T {
         match self {
             Self::Boxed(bx) => bx,
-            Self::BoxRef(r) => r,
+            Self::Ref(r) => r,
             Self::Raw(ptr) => unsafe { ptr.as_ref() },
         }
     }
@@ -419,7 +419,7 @@ impl<'a, T> AsMut<T> for StableRefMut<'a, T> {
     fn as_mut(&mut self) -> &mut T {
         match self {
             Self::Boxed(bx) => bx,
-            Self::BoxRef(r) => r,
+            Self::Ref(r) => r,
             Self::Raw(ptr) => unsafe { ptr.as_mut() },
         }
     }
@@ -433,7 +433,7 @@ impl<T> From<Box<T>> for StableRef<'_, T> {
 
 impl<'a, T> From<&'a Box<T>> for StableRef<'a, T> {
     fn from(value: &'a Box<T>) -> Self {
-        Self::BoxRef(value)
+        Self::Ref(value)
     }
 }
 
@@ -445,14 +445,14 @@ impl<T> From<Box<T>> for StableRefMut<'_, T> {
 
 impl<'a, T> From<&'a mut Box<T>> for StableRefMut<'a, T> {
     fn from(value: &'a mut Box<T>) -> Self {
-        Self::BoxRef(value)
+        Self::Ref(value)
     }
 }
 
 impl<'a, T> From<StableRefMut<'a, T>> for StableRef<'a, T> {
     fn from(value: StableRefMut<'a, T>) -> Self {
         match value {
-            StableRefMut::BoxRef(r) => StableRef::BoxRef(r),
+            StableRefMut::Ref(r) => StableRef::Ref(r),
             StableRefMut::Raw(r) => StableRef::Raw(r),
             StableRefMut::Boxed(r) => StableRef::Boxed(r),
         }
@@ -463,7 +463,7 @@ impl<'a, T: Clone> Clone for StableRef<'a, T> {
     fn clone(&self) -> Self {
         match self {
             Self::Boxed(b) => Self::Boxed(b.clone()),
-            Self::BoxRef(r) => Self::BoxRef(r),
+            Self::Ref(r) => Self::Ref(r),
             Self::Raw(r) => Self::Raw(*r),
         }
     }
@@ -527,7 +527,7 @@ mod tests {
         let rbox: StableRef<'_, Thing> = StableRef::from_box(box_thing);
         let rraw: StableRef<'_, Thing> =
             unsafe { StableRef::from_raw(NonNull::new(raw_thing).unwrap()) };
-        let rref: StableRef<'_, Thing> = StableRef::from_boxref(&ref_thing);
+        let rref: StableRef<'_, Thing> = StableRef::from_ref(&ref_thing);
 
         inspect_thing(rbox);
         inspect_thing(rraw);
@@ -543,19 +543,19 @@ mod tests {
         let mut rbox: StableRefMut<'_, Thing> = StableRefMut::from_box(box_thing);
         let mut rraw: StableRefMut<'_, Thing> =
             unsafe { StableRefMut::from_raw(NonNull::new(raw_thing).unwrap()) };
-        let mut rref: StableRefMut<'_, Thing> = StableRefMut::from_boxref(&mut ref_thing);
+        let mut rref: StableRefMut<'_, Thing> = StableRefMut::from_ref(&mut ref_thing);
 
-        inspect_thing(rbox.as_stable_ref());
-        inspect_thing(rraw.as_stable_ref());
-        inspect_thing(rref.as_stable_ref());
+        inspect_thing(rbox.stable_ref());
+        inspect_thing(rraw.stable_ref());
+        inspect_thing(rref.stable_ref());
 
         change_thing(&mut rbox);
         change_thing(&mut rraw);
         change_thing(&mut rref);
 
-        inspect_thing(rbox.as_stable_ref());
-        inspect_thing(rraw.as_stable_ref());
-        inspect_thing(rref.as_stable_ref());
+        inspect_thing(rbox.stable_ref());
+        inspect_thing(rraw.stable_ref());
+        inspect_thing(rref.stable_ref());
     }
 
     #[test]
