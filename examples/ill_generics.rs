@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::HashMap,
     ops::{AddAssign, SubAssign},
     sync::{Arc, RwLock},
     thread::{self, JoinHandle},
@@ -13,6 +13,7 @@ use datastructurs_macros::IntoIntrusiveList;
 
 #[derive(Debug)]
 struct State {
+    #[allow(unused)]
     name: String,
     fun_number: i64,
 }
@@ -40,7 +41,6 @@ struct WorkProvider<Res> {
     threads: Vec<JoinHandle<Result<()>>>,
     list_priority: IntrusiveList<Task<Res>, AccPrio>,
     list_ready: IntrusiveList<Task<Res>, AccReady>,
-    tasks: VecDeque<Task<Res>>,
     next_id: usize,
 }
 
@@ -53,7 +53,6 @@ impl<Res: Send + Sync + 'static> WorkProvider<Res> {
         let results = HashMap::new();
 
         let wp = Self {
-            tasks: VecDeque::new(),
             state,
             results,
             threads: Vec::new(),
@@ -83,17 +82,16 @@ impl<Res: Send + Sync + 'static> WorkProvider<Res> {
             self.list_ready.head
         );
         let id = self.next_id();
-        let task = Task {
+        let mut task = Box::new(Task {
             id,
             work: Some(work),
             link_ready: Default::default(),
             link_priority: Default::default(),
-        };
-        self.tasks.push_front(task);
-        self.list_ready.push_back(&mut self.tasks[0]);
+        });
         if priority {
-            self.list_priority.push_back(&mut self.tasks[0]);
+            self.list_priority.push_back(&mut task);
         }
+        self.list_ready.push_back(task);
         trace!(
             "After add: ready.len={}, ready.head={:?}",
             self.list_ready.len(),

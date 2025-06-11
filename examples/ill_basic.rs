@@ -1,5 +1,6 @@
 use datastructurs::{
     intrusive_linked_list::{IntrusiveList, ListLink},
+    stable_ref::StableRefMut,
     vec::Vec,
 };
 use datastructurs_macros::IntoIntrusiveList;
@@ -24,14 +25,17 @@ impl FooBar {
 }
 
 fn main() {
-    let mut a = FooBar::new(12);
+    let a = FooBar::new(12);
     let mut store = Vec::new();
     let mut list = List::new();
-    list.push_back(&mut a);
+    list.push_back(StableRefMut::create_box(a));
 
     for i in 0..32 {
         store.push(FooBar::new(i as i32));
-        list.push_back(&mut store[i]);
+        // NOTE: the user needs to guarantee that the address of the data will never change if the data
+        // is stored in some other datastructure.
+        // TODO: is this example actually working fine?
+        list.push_back(unsafe { StableRefMut::from_ref_to_raw(&mut store[i]) });
     }
 
     for your_mom in list.iter() {

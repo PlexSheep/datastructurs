@@ -1,4 +1,5 @@
 use datastructurs::intrusive_linked_list::{IntoIntrusiveList, IntrusiveList, ListLink};
+use datastructurs::stable_ref::StableRefMut;
 use datastructurs::trace;
 use datastructurs::vec::Vec;
 
@@ -30,7 +31,8 @@ fn test_ill_basic_derive() {
     for i in 0..22 {
         let bla = Bla::new(i as f32);
         datastore.push(bla);
-        list.push_back(&mut datastore[i]);
+        let stable = unsafe { StableRefMut::from_ref_to_raw(&mut datastore[i]) };
+        list.push_back(stable);
     }
 
     trace!("{}", list.debug_nodes());
@@ -46,7 +48,8 @@ fn test_ill_move_elements() {
     for i in 0..8 {
         datastore.push(Bla::new(i as f32));
         trace!("adding {:?} to list", datastore.last_mut().unwrap());
-        list.push_back(datastore.last_mut().unwrap());
+        let stable = unsafe { StableRefMut::from_ref_to_raw(datastore.last_mut().unwrap()) };
+        list.push_back(stable);
         trace!("{}", list.debug_nodes());
     }
     trace!("{}", list.debug_nodes());
@@ -59,7 +62,8 @@ fn test_ill_drop_elements() {
     for i in 0..8 {
         datastore.push(Bla::new(i as f32));
         trace!("adding {:?} to list", datastore.last_mut().unwrap());
-        list.push_back(datastore.last_mut().unwrap());
+        let stable = unsafe { StableRefMut::from_ref_to_raw(datastore.last_mut().unwrap()) };
+        list.push_back(stable);
         trace!("{}", list.debug_nodes());
     }
     datastore.clear();

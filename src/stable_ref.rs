@@ -221,6 +221,11 @@ impl<'a, T> StableRef<'a, T> {
         Self::BoxRef(r)
     }
 
+    #[inline]
+    pub unsafe fn from_ref_to_raw(r: &'a mut T) -> Self {
+        unsafe { Self::from_raw(NonNull::new_unchecked(r as *mut T)) }
+    }
+
     /// Returns a raw pointer to the referenced value.
     ///
     /// The pointer is valid for the lifetime of this [`StableRef`].
@@ -334,6 +339,11 @@ impl<'a, T> StableRefMut<'a, T> {
     #[inline]
     pub fn from_boxref(r: &'a mut Box<T>) -> Self {
         Self::BoxRef(r)
+    }
+
+    #[inline]
+    pub unsafe fn from_ref_to_raw(r: &'a mut T) -> Self {
+        unsafe { Self::from_raw(NonNull::new_unchecked(r as *mut T)) }
     }
 
     /// Returns a raw pointer to the referenced value.
