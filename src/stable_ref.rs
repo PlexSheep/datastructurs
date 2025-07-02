@@ -96,7 +96,11 @@
 // moves in the memory
 #![allow(clippy::borrowed_box)]
 
-use std::ptr::NonNull;
+use std::{
+    ops::{Deref, DerefMut},
+    pin::Pin,
+    ptr::NonNull,
+};
 
 /// A reference that guarantees the pointed-to value has a stable memory address.
 ///
@@ -118,7 +122,7 @@ pub enum StableRef<'a, T: 'a> {
     /// Borrowed reference to a Box. The Box can not be dropped while this reference exists
     BoxRef(&'a Box<T>),
     /// Regular immutable borrow
-    Ref(&'a T),
+    Ref(Pin<&'a T>),
     /// Raw pointer with manual lifetime management.
     Raw(NonNull<T>),
 }
@@ -138,7 +142,7 @@ pub enum StableRefMut<'a, T: 'a> {
     /// Borrowed mutable reference to a Box. The Box must outlive this reference.
     BoxRef(&'a mut Box<T>),
     /// Regular mutable borrow
-    Ref(&'a mut T),
+    Ref(Pin<&'a mut T>),
     /// Raw mutable pointer with manual lifetime management.
     Raw(NonNull<T>),
 }
@@ -225,9 +229,9 @@ impl<'a, T> StableRef<'a, T> {
         Self::BoxRef(r)
     }
 
-    /// Creates a [`StableRef`] that borrows a `T`.
+    /// Creates a [`StableRef`] that borrows a [`Pin<T>`].
     #[inline]
-    pub fn from_ref(r: &'a T) -> Self {
+    pub fn from_ref(r: Pin<&'a T>) -> Self {
         Self::Ref(r)
     }
 
@@ -258,7 +262,7 @@ impl<'a, T> StableRef<'a, T> {
     pub unsafe fn into_stable_mut(self) -> StableRefMut<'a, T> {
         match self {
             StableRef::BoxRef(r) => StableRefMut::BoxRef(unsafe { ref_to_mut(r) }),
-            StableRef::Ref(r) => StableRefMut::Ref(unsafe { ref_to_mut(r) }),
+            StableRef::Ref(r) => StableRefMut::Ref(unsafe { pin_to_mut(r) }),
             StableRef::Raw(r) => StableRefMut::Raw(r),
             StableRef::Boxed(r) => StableRefMut::Boxed(r),
         }
@@ -315,9 +319,9 @@ impl<'a, T> StableRefMut<'a, T> {
         Self::Boxed(bx)
     }
 
-    /// Creates a [`StableRefMut`] that borrows a `T`.
+    /// Creates a [`StableRefMut`] that borrows a [`Pin<T>`].
     #[inline]
-    pub fn from_ref(r: &'a mut T) -> Self {
+    pub fn from_ref(r: Pin<&'a mut T>) -> Self {
         Self::Ref(r)
     }
 
@@ -377,22 +381,6 @@ impl<'a, T> StableRefMut<'a, T> {
         }
     }
 
-    /// Convert a reference to a [StableRefMut] into a [StableRef]
-    ///
-    /// # Safety
-    ///
-    /// [`StableRefMut::Boxed`] becomes a [`StableRef::BoxRef`],
-    /// but this is a safe operation.
-    #[inline]
-    pub fn as_stable_ref(&'a self) -> StableRef<'a, T> {
-        match self {
-            Self::Boxed(b) => StableRef::BoxRef(b),
-            Self::BoxRef(b) => StableRef::BoxRef(b),
-            Self::Raw(r) => StableRef::Raw(*r),
-            Self::Ref(r) => StableRef::Ref(r),
-        }
-    }
-
     /// Convert the [StableRefMut] into a [StableRef]
     ///
     /// # Safety
@@ -405,7 +393,7 @@ impl<'a, T> StableRefMut<'a, T> {
             Self::Boxed(b) => StableRef::Boxed(b),
             Self::BoxRef(r) => StableRef::BoxRef(r),
             Self::Raw(r) => StableRef::Raw(r),
-            Self::Ref(r) => StableRef::Ref(r),
+            Self::Ref(r) => StableRef::Ref(r.into_ref()),
         }
     }
 
@@ -423,7 +411,7 @@ impl<'a, T> StableRefMut<'a, T> {
             Self::Boxed(b) => Self::BoxRef(unsafe { ref_to_mut(b) }),
             Self::BoxRef(r) => Self::BoxRef(unsafe { ref_to_mut(*r) }),
             Self::Raw(r) => Self::Raw(*r),
-            Self::Ref(r) => Self::Ref(unsafe { ref_to_mut(*r) }),
+            Self::Ref(r) => Self::Raw(ref_to_raw(r)),
         }
     }
 }
@@ -454,7 +442,7 @@ impl<'a, T> AsMut<T> for StableRefMut<'a, T> {
     fn as_mut(&mut self) -> &mut T {
         match self {
             Self::Boxed(bx) => bx,
-            Self::Ref(r) => r,
+            Self::Ref(r) => unsafe { std::pin::Pin::<&mut T>::into_inner_unchecked(r.as_mut()) },
             Self::BoxRef(r) => r,
             Self::Raw(ptr) => unsafe { ptr.as_mut() },
         }
@@ -491,7 +479,7 @@ impl<'a, T> From<StableRefMut<'a, T>> for StableRef<'a, T> {
             StableRefMut::BoxRef(r) => StableRef::BoxRef(r),
             StableRefMut::Raw(r) => StableRef::Raw(r),
             StableRefMut::Boxed(r) => StableRef::Boxed(r),
-            StableRefMut::Ref(r) => StableRef::Ref(r),
+            StableRefMut::Ref(r) => StableRef::Ref(r.into_ref()),
         }
     }
 }
@@ -501,7 +489,7 @@ impl<'a, T: Clone> Clone for StableRef<'a, T> {
         match self {
             Self::Boxed(b) => Self::Boxed(b.clone()),
             Self::BoxRef(r) => Self::BoxRef(r),
-            Self::Ref(r) => Self::Ref(r),
+            Self::Ref(r) => Self::Ref(*r),
             Self::Raw(r) => Self::Raw(*r),
         }
     }
@@ -518,11 +506,21 @@ pub(crate) fn ref_to_raw<T>(b: &T) -> NonNull<T> {
     NonNull::new(a as *mut T).expect("pointer was null!")
 }
 
-#[allow(unused)]
 #[allow(clippy::mut_from_ref)]
+#[inline]
 pub(crate) unsafe fn ref_to_mut<T>(t: &T) -> &mut T {
     let p = t as *const T as *mut T;
     unsafe { p.as_mut().expect("pointer was null") }
+}
+
+#[allow(clippy::mut_from_ref)]
+#[inline]
+pub(crate) unsafe fn pin_to_mut<T>(r: Pin<&T>) -> Pin<&mut T> {
+    unsafe {
+        let a: &T = Pin::into_inner_unchecked(r);
+        let b: &mut T = ref_to_mut(a);
+        Pin::new_unchecked(b)
+    }
 }
 
 #[cfg(test)]
@@ -583,17 +581,17 @@ mod tests {
             unsafe { StableRefMut::from_raw(NonNull::new(raw_thing).unwrap()) };
         let mut rref: StableRefMut<'_, Thing> = StableRefMut::from_boxref(&mut ref_thing);
 
-        inspect_thing(rbox.as_stable_ref());
-        inspect_thing(rraw.as_stable_ref());
-        inspect_thing(rref.as_stable_ref());
+        inspect_thing(unsafe { rbox.clone() }.into_stable_ref());
+        inspect_thing(unsafe { rraw.clone() }.into_stable_ref());
+        inspect_thing(unsafe { rref.clone() }.into_stable_ref());
 
         change_thing(&mut rbox);
         change_thing(&mut rraw);
         change_thing(&mut rref);
 
-        inspect_thing(rbox.as_stable_ref());
-        inspect_thing(rraw.as_stable_ref());
-        inspect_thing(rref.as_stable_ref());
+        inspect_thing(rbox.into_stable_ref());
+        inspect_thing(rraw.into_stable_ref());
+        inspect_thing(rref.into_stable_ref());
     }
 
     #[test]
