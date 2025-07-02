@@ -4,12 +4,12 @@ use super::*;
 
 #[test]
 fn test_btree_create() {
-    let _tree = BTree::<u32>::new(DEFAULT_BRANCH_FACTOR);
+    let _tree = BTreeSet::<u32>::new(DEFAULT_BRANCH_FACTOR);
 }
 
 #[test]
 fn test_btree_insert_contains_remove_in_order() {
-    let mut tree = BTree::<u32>::new(3); // Small degree for easier testing
+    let mut tree = BTreeSet::<u32>::new(3); // Small degree for easier testing
     let data = &[10, 20, 5, 6, 12, 30, 7, 17];
 
     for &value in data {
@@ -31,7 +31,7 @@ fn test_btree_insert_contains_remove_in_order() {
 
 #[test]
 fn test_btree_insert_contains_remove_out_of_order() {
-    let mut tree = BTree::<u32>::new(3); // Small degree for easier testing
+    let mut tree = BTreeSet::<u32>::new(3); // Small degree for easier testing
     let data = &[10, 20, 5, 6, 12, 30, 7, 17];
 
     for &value in data {
@@ -61,7 +61,7 @@ fn test_btree_insert_contains_remove_out_of_order() {
 
 #[test]
 fn test_btree_iteration() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
     let data = [10, 20, 5, 6, 12, 30, 7, 17];
 
     for value in data {
@@ -82,7 +82,7 @@ fn test_btree_iteration() {
 
 #[test]
 fn test_btree_height() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
     assert_eq!(tree.height(), 0);
 
     tree.insert(1);
@@ -97,7 +97,7 @@ fn test_btree_height() {
 
 #[test]
 fn test_btree_moderate_dataset() {
-    let mut tree = BTree::<u32>::new(50);
+    let mut tree = BTreeSet::<u32>::new(50);
     let mut data = Vec::new();
     for i in 0..10000 {
         data.push(i);
@@ -116,7 +116,7 @@ fn test_btree_moderate_dataset() {
 #[test]
 fn test_btree_iter() {
     let data: Vec<_> = (0..9999).collect();
-    let mut tree = BTree::new(DEFAULT_BRANCH_FACTOR);
+    let mut tree = BTreeSet::new(DEFAULT_BRANCH_FACTOR);
     for d in &data {
         tree.insert(d);
     }
@@ -129,7 +129,7 @@ fn test_btree_iter() {
 #[test]
 #[ignore = "too work heavy"]
 fn test_btree_stress() {
-    let mut tree = BTree::new(DEFAULT_BRANCH_FACTOR);
+    let mut tree = BTreeSet::new(DEFAULT_BRANCH_FACTOR);
     let range = 0..5_000_000;
     for d in range.clone() {
         tree.insert(d);
@@ -149,7 +149,7 @@ fn test_btree_stress() {
 
 #[test]
 fn test_btree_simple_remove() {
-    let mut tree = BTree::new(2); // degree=4, min_keys=2, max_keys=3
+    let mut tree = BTreeSet::new(2); // degree=4, min_keys=2, max_keys=3
     assert_eq!(tree.node_count(), 1);
     tree.insert(1337);
     assert_eq!(tree.node_count(), 1);
@@ -186,7 +186,7 @@ fn test_btree_simple_remove() {
 
 #[test]
 fn test_btree_empty_operations() {
-    let tree = BTree::<i32>::new(3);
+    let tree = BTreeSet::<i32>::new(3);
     assert!(tree.is_empty());
     assert_eq!(tree.len(), 0);
     assert_eq!(tree.height(), 0);
@@ -197,7 +197,7 @@ fn test_btree_empty_operations() {
 
 #[test]
 fn test_btree_single_element() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
     tree.insert(42);
 
     assert!(!tree.is_empty());
@@ -211,7 +211,7 @@ fn test_btree_single_element() {
 
 #[test]
 fn test_btree_ordered_insertion() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
     let data = (1..=100).collect::<std::vec::Vec<_>>();
 
     for &x in &data {
@@ -230,7 +230,7 @@ fn test_btree_ordered_insertion() {
 
 #[test]
 fn test_btree_reverse_insertion() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
     let data = (1..=100).rev().collect::<std::vec::Vec<_>>();
 
     for &x in &data {
@@ -245,7 +245,7 @@ fn test_btree_reverse_insertion() {
 
 #[test]
 fn test_btree_random_insertion() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
     let mut data = (1..=50).collect::<std::vec::Vec<_>>();
 
     // Shuffle the data (simple pseudo-random shuffle)
@@ -266,7 +266,7 @@ fn test_btree_random_insertion() {
 
 #[test]
 fn test_btree_duplicates() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
 
     tree.insert(5);
     tree.insert(5);
@@ -282,7 +282,7 @@ fn test_btree_duplicates() {
 
 #[test]
 fn test_btree_first_last() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
     let data = vec![50, 25, 75, 10, 30, 60, 80];
 
     for &x in &data {
@@ -295,7 +295,7 @@ fn test_btree_first_last() {
 
 #[test]
 fn test_btree_pop_operations() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
     let data = vec![1, 3, 5, 7, 9];
 
     for &x in &data {
@@ -312,7 +312,7 @@ fn test_btree_pop_operations() {
 
 #[test]
 fn test_btree_remove_all_elements() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
     let data = (1..=20).collect::<std::vec::Vec<_>>();
 
     for &x in &data {
@@ -337,7 +337,7 @@ fn test_btree_remove_all_elements() {
 
 #[test]
 fn test_btree_height_characteristics() {
-    let mut tree = BTree::new(50); // Large branch factor
+    let mut tree = BTreeSet::new(50); // Large branch factor
 
     // Insert many elements and verify height grows logarithmically
     for i in 1..=1000 {
@@ -354,7 +354,7 @@ fn test_btree_height_characteristics() {
 
 #[test]
 fn test_btree_range_iteration() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
     let data = (1..=100).collect::<std::vec::Vec<_>>();
 
     for &x in &data {
@@ -376,7 +376,7 @@ fn test_btree_range_iteration() {
 
 #[test]
 fn test_btree_clear() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
 
     for i in 1..=100 {
         tree.insert(i);
@@ -397,7 +397,7 @@ fn test_btree_clear() {
 #[test]
 fn test_btree_different_branch_factors() {
     for branch_factor in [2, 3, 5, 10, 50, 100, 200, 1000].iter() {
-        let mut tree = BTree::new(*branch_factor);
+        let mut tree = BTreeSet::new(*branch_factor);
         let data = (1..=100).collect::<std::vec::Vec<_>>();
 
         for &x in &data {
@@ -421,7 +421,7 @@ fn test_btree_different_branch_factors() {
 
 #[test]
 fn test_btree_string_operations() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
     let words = vec!["apple", "banana", "cherry", "date", "elderberry"];
 
     for &word in &words {
@@ -444,7 +444,7 @@ fn test_btree_string_operations() {
 
 #[test]
 fn test_btree_memory_intensive() {
-    let mut tree = BTree::new(DEFAULT_BRANCH_FACTOR);
+    let mut tree = BTreeSet::new(DEFAULT_BRANCH_FACTOR);
     let size = 100_000;
 
     // Insert large dataset
@@ -473,7 +473,7 @@ fn test_btree_memory_intensive() {
 
 #[test]
 fn test_btree_edge_removals() {
-    let mut tree = BTree::new(2); // Small degree to force more splits/merges
+    let mut tree = BTreeSet::new(2); // Small degree to force more splits/merges
 
     // Insert sequence that will cause complex tree structure
     for i in [10, 5, 15, 2, 7, 12, 18, 1, 3, 6, 8, 11, 13, 16, 20] {

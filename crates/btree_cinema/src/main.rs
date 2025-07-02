@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use datastructurs::btree::BTree;
+use datastructurs::btree::BTreeSet;
 use getopts::Options;
 use rand::prelude::IteratorRandom;
 
@@ -37,7 +37,7 @@ fn fill_ratio(len: usize, base_ratio: f64) -> f64 {
     (1.0 - (len as f64 / Item::MAX as f64) * (base_ratio)).clamp(0.0, 1.0)
 }
 
-fn render(tree: &BTree<Item>, fill: f64, tick: usize, action: Action) {
+fn render(tree: &BTreeSet<Item>, fill: f64, tick: usize, action: Action) {
     clear();
     println!("{tree}\n\n");
     println!("fill: {fill:.02}");
@@ -107,7 +107,7 @@ fn main() {
 }
 
 fn cinema(random_insert: bool, auto: Option<u64>, branching_factor: usize, ratio: f64) {
-    let mut tree = BTree::<Item>::new(branching_factor);
+    let mut tree = BTreeSet::<Item>::new(branching_factor);
     let mut fill = 1.0;
     let mut action;
     let mut tick: usize = 0;

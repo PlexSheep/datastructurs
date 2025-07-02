@@ -1,7 +1,7 @@
-use datastructurs::btree::{BTree, DEFAULT_BRANCH_FACTOR};
+use datastructurs::btree::{BTreeSet, DEFAULT_BRANCH_FACTOR};
 
 fn main() {
-    let mut tree = BTree::new(DEFAULT_BRANCH_FACTOR);
+    let mut tree = BTreeSet::new(DEFAULT_BRANCH_FACTOR);
     for i in 0..50_000 {
         tree.insert(i);
         assert!(tree.contains(&i));

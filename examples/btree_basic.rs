@@ -1,4 +1,4 @@
-use datastructurs::btree::BTree;
+use datastructurs::btree::BTreeSet;
 
 fn wait_user() {
     println!("Press enter to continue");
@@ -6,7 +6,7 @@ fn wait_user() {
 }
 
 fn main() {
-    let mut tree = BTree::new(3);
+    let mut tree = BTreeSet::new(3);
     for i in 0..20 {
         tree.insert(i);
         assert!(tree.contains(&i));

@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
-use super::{BTree, Node, NodePtr, deref_node, deref_node_mut};
+use super::{BTreeSet, Node, NodePtr, deref_node, deref_node_mut};
 
 impl<T: Ord> Drop for Node<T> {
     fn drop(&mut self) {
@@ -11,7 +11,7 @@ impl<T: Ord> Drop for Node<T> {
     }
 }
 
-impl<T: Ord + Clone> Drop for BTree<T> {
+impl<T: Ord + Clone> Drop for BTreeSet<T> {
     fn drop(&mut self) {
         Node::drop(self.root);
     }
@@ -85,7 +85,7 @@ impl<T: Ord + Clone + Debug> Debug for Node<T> {
     }
 }
 
-impl<T: Ord + Clone + Debug> Debug for BTree<T> {
+impl<T: Ord + Clone + Debug> Debug for BTreeSet<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BTree")
             .field("props", &self.props)
@@ -94,7 +94,7 @@ impl<T: Ord + Clone + Debug> Debug for BTree<T> {
     }
 }
 
-impl<T: Ord + Clone + Display + Debug> Display for BTree<T> {
+impl<T: Ord + Clone + Display + Debug> Display for BTreeSet<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fn render_child<T: Ord + Clone + Display + Debug>(
             node: &Node<T>,
