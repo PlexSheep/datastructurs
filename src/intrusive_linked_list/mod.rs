@@ -166,6 +166,7 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
 
         #[cfg(debug_assertions)]
         {
+            debug_assert!(self.len > 0);
             debug_assert!(self.head.is_some());
             debug_assert!(self.tail.is_some());
         }
