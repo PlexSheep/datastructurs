@@ -1,24 +1,17 @@
-use std::{fmt::Debug, mem, ptr::NonNull};
+use std::{fmt::Debug, mem};
 
 use impls::BTreeIter;
 
-use crate::vec::Vec;
+use crate::{
+    btree::{Node, NodePtr, OpNodePtr, deref_node, deref_node_mut},
+    vec::Vec,
+};
 
 mod impls;
 
-#[derive(Clone, PartialEq, Eq)]
-pub(crate) struct Node<T: Ord> {
-    keys: Vec<T>,
-    parent: Option<NodePtr<T>>,
-    children: Vec<NodePtr<T>>,
-}
-
-pub(crate) type NodePtr<T> = NonNull<Node<T>>;
-pub(crate) type OpNodePtr<T> = Option<NodePtr<T>>;
-
 #[derive(Clone)]
 pub struct BTreeSet<T: Ord + Clone> {
-    root: NodePtr<T>,
+    pub(crate) root: NodePtr<T>,
     pub(crate) props: BTreeProperties,
 }
 
@@ -29,21 +22,6 @@ pub struct BTreeProperties {
     pub(crate) min_keys: usize,
     pub(crate) mid_key_index: usize,
     pub(crate) len: usize,
-}
-
-impl<T: Ord> Node<T> {
-    fn store_on_heap(self) -> NodePtr<T> {
-        unsafe { NodePtr::new_unchecked(Box::into_raw(Box::new(self))) }
-    }
-
-    fn as_ptr(&self) -> NodePtr<T> {
-        let a: *const Self = self;
-        unsafe { NodePtr::new_unchecked(a as *mut Self) }
-    }
-
-    fn drop(node_ptr: NodePtr<T>) {
-        unsafe { drop(Box::from_raw(node_ptr.as_ptr())) }
-    }
 }
 
 impl BTreeProperties {
@@ -138,7 +116,7 @@ impl<T: Ord> Node<T> {
     }
 
     #[must_use]
-    fn is_leaf(&self) -> bool {
+    pub(crate) fn is_leaf(&self) -> bool {
         self.children.is_empty()
     }
 }
@@ -568,19 +546,6 @@ impl<T: Ord + Clone> BTreeSet<T> {
         }
         current.keys[0].clone()
     }
-}
-
-#[inline]
-#[must_use]
-fn deref_node<'a, T: Ord + 'a>(p: NodePtr<T>) -> &'a Node<T> {
-    unsafe { &*p.as_ptr() }
-}
-
-#[inline]
-#[must_use]
-#[allow(clippy::mut_from_ref)]
-fn deref_node_mut<'a, T: Ord + 'a>(p: NodePtr<T>) -> &'a mut Node<T> {
-    unsafe { &mut *p.as_ptr() }
 }
 
 #[cfg(test)]

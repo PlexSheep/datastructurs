@@ -1,4 +1,4 @@
-use crate::trace;
+use crate::{btree::DEFAULT_BRANCH_FACTOR, trace};
 
 use super::*;
 
