@@ -117,6 +117,8 @@ pub enum StableRef<'a, T: 'a> {
     Boxed(Box<T>),
     /// Borrowed reference to a Box. The Box can not be dropped while this reference exists
     BoxRef(&'a Box<T>),
+    /// Regular immutable borrow
+    Ref(&'a T),
     /// Raw pointer with manual lifetime management.
     Raw(NonNull<T>),
 }
@@ -135,6 +137,8 @@ pub enum StableRefMut<'a, T: 'a> {
     Boxed(Box<T>),
     /// Borrowed mutable reference to a Box. The Box must outlive this reference.
     BoxRef(&'a mut Box<T>),
+    /// Regular mutable borrow
+    Ref(&'a mut T),
     /// Raw mutable pointer with manual lifetime management.
     Raw(NonNull<T>),
 }
@@ -221,6 +225,12 @@ impl<'a, T> StableRef<'a, T> {
         Self::BoxRef(r)
     }
 
+    /// Creates a [`StableRef`] that borrows a `T`.
+    #[inline]
+    pub fn from_ref(r: &'a T) -> Self {
+        Self::Ref(r)
+    }
+
     #[inline]
     pub unsafe fn from_ref_to_raw(r: &'a mut T) -> Self {
         unsafe { Self::from_raw(NonNull::new_unchecked(r as *mut T)) }
@@ -233,6 +243,7 @@ impl<'a, T> StableRef<'a, T> {
     pub fn as_ptr(&self) -> NonNull<T> {
         match self {
             Self::Raw(r) => *r,
+            Self::Ref(r) => ref_to_raw(r),
             Self::Boxed(r) => box_to_raw(r),
             Self::BoxRef(r) => ref_to_raw(r),
         }
@@ -247,6 +258,7 @@ impl<'a, T> StableRef<'a, T> {
     pub unsafe fn into_stable_mut(self) -> StableRefMut<'a, T> {
         match self {
             StableRef::BoxRef(r) => StableRefMut::BoxRef(unsafe { ref_to_mut(r) }),
+            StableRef::Ref(r) => StableRefMut::Ref(unsafe { ref_to_mut(r) }),
             StableRef::Raw(r) => StableRefMut::Raw(r),
             StableRef::Boxed(r) => StableRefMut::Boxed(r),
         }
@@ -303,6 +315,12 @@ impl<'a, T> StableRefMut<'a, T> {
         Self::Boxed(bx)
     }
 
+    /// Creates a [`StableRefMut`] that borrows a `T`.
+    #[inline]
+    pub fn from_ref(r: &'a mut T) -> Self {
+        Self::Ref(r)
+    }
+
     /// [Box] a value and create a [StableRefMut] with [StableRefMut::from_box]
     #[inline]
     pub fn create_box(bx: impl Into<Box<T>>) -> Self {
@@ -353,6 +371,7 @@ impl<'a, T> StableRefMut<'a, T> {
     pub fn as_ptr(&self) -> NonNull<T> {
         match self {
             Self::Raw(r) => *r,
+            Self::Ref(r) => ref_to_raw(r),
             Self::Boxed(r) => box_to_raw(r),
             Self::BoxRef(r) => ref_to_raw(r),
         }
@@ -370,6 +389,7 @@ impl<'a, T> StableRefMut<'a, T> {
             Self::Boxed(b) => StableRef::BoxRef(b),
             Self::BoxRef(b) => StableRef::BoxRef(b),
             Self::Raw(r) => StableRef::Raw(*r),
+            Self::Ref(r) => StableRef::Ref(r),
         }
     }
 
@@ -385,6 +405,7 @@ impl<'a, T> StableRefMut<'a, T> {
             Self::Boxed(b) => StableRef::Boxed(b),
             Self::BoxRef(r) => StableRef::BoxRef(r),
             Self::Raw(r) => StableRef::Raw(r),
+            Self::Ref(r) => StableRef::Ref(r),
         }
     }
 
@@ -398,9 +419,11 @@ impl<'a, T> StableRefMut<'a, T> {
     #[allow(elided_named_lifetimes)]
     pub unsafe fn clone(&'a self) -> StableRefMut<'_, T> {
         match self {
+            // HACK: converting the box to a boxref might be a memory leak
             Self::Boxed(b) => Self::BoxRef(unsafe { ref_to_mut(b) }),
             Self::BoxRef(r) => Self::BoxRef(unsafe { ref_to_mut(*r) }),
             Self::Raw(r) => Self::Raw(*r),
+            Self::Ref(r) => Self::Ref(unsafe { ref_to_mut(*r) }),
         }
     }
 }
@@ -410,6 +433,7 @@ impl<'a, T> AsRef<T> for StableRef<'a, T> {
         match self {
             Self::Boxed(bx) => bx,
             Self::BoxRef(r) => r,
+            Self::Ref(r) => r,
             Self::Raw(ptr) => unsafe { ptr.as_ref() },
         }
     }
@@ -420,6 +444,7 @@ impl<'a, T> AsRef<T> for StableRefMut<'a, T> {
         match self {
             Self::Boxed(bx) => bx,
             Self::BoxRef(r) => r,
+            Self::Ref(r) => r,
             Self::Raw(ptr) => unsafe { ptr.as_ref() },
         }
     }
@@ -429,6 +454,7 @@ impl<'a, T> AsMut<T> for StableRefMut<'a, T> {
     fn as_mut(&mut self) -> &mut T {
         match self {
             Self::Boxed(bx) => bx,
+            Self::Ref(r) => r,
             Self::BoxRef(r) => r,
             Self::Raw(ptr) => unsafe { ptr.as_mut() },
         }
@@ -465,6 +491,7 @@ impl<'a, T> From<StableRefMut<'a, T>> for StableRef<'a, T> {
             StableRefMut::BoxRef(r) => StableRef::BoxRef(r),
             StableRefMut::Raw(r) => StableRef::Raw(r),
             StableRefMut::Boxed(r) => StableRef::Boxed(r),
+            StableRefMut::Ref(r) => StableRef::Ref(r),
         }
     }
 }
@@ -474,6 +501,7 @@ impl<'a, T: Clone> Clone for StableRef<'a, T> {
         match self {
             Self::Boxed(b) => Self::Boxed(b.clone()),
             Self::BoxRef(r) => Self::BoxRef(r),
+            Self::Ref(r) => Self::Ref(r),
             Self::Raw(r) => Self::Raw(*r),
         }
     }
