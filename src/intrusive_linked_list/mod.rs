@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Write};
+use std::marker::PhantomPinned;
 use std::{marker::PhantomData, ptr::NonNull};
 
 use impls::{Iter, IterMut};
@@ -14,6 +15,8 @@ use crate::trace;
 pub struct ListLink {
     next: OpNodePtr,
     prev: OpNodePtr,
+    // This structure must never move in memory
+    _pin: PhantomPinned,
 }
 
 pub type ItemMut<'a, T> = StableRefMut<'a, T>;
@@ -43,6 +46,7 @@ impl ListLink {
         Self {
             next: None,
             prev: None,
+            _pin: PhantomPinned,
         }
     }
 

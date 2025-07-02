@@ -49,7 +49,7 @@ fn test_ill_move_elements() {
     for i in 0..8 {
         datastore.push(Bla::new(i as f32));
         trace!("adding {:?} to list", datastore.last_mut().unwrap());
-        let stable = unsafe { StableRefMut::from_ref_to_raw(datastore.last_mut().unwrap()) };
+        let stable = StableRefMut::from_ref(datastore.last_mut().unwrap());
         list.push_back(stable);
         trace!("{}", list.debug_nodes());
     }
