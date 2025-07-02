@@ -5,18 +5,20 @@ use crate::btree::{BTreeSet, Node, NodePtr, deref_node, deref_node_mut};
 mod impls;
 
 #[derive(Debug, Clone)]
-struct MapPair<K: Ord, V: Clone> {
+struct MapPair<K, V> {
     key: K,
     value: V,
 }
 
 // NOTE: the key and value must be Clone because of BTreeSet implementation details. BTreeSet should
 // eventually be remfactored to remove the Clone dependency
+#[derive(Clone)]
 pub struct BTreeMap<K: Ord + Clone, V: Clone> {
     set: BTreeSet<MapPair<K, V>>,
 }
 
 impl<K: Ord + Clone, V: Clone> BTreeMap<K, V> {
+    #[must_use]
     pub fn new(branch_factor: usize) -> Self {
         let set = BTreeSet::new(branch_factor);
         Self { set }
@@ -37,6 +39,53 @@ impl<K: Ord + Clone, V: Clone> BTreeMap<K, V> {
         r.map(|r| r.value)
     }
 
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.set.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.set.is_empty()
+    }
+
+    #[must_use]
+    pub fn get(&self, key: &K) -> Option<&V> {
+        let this = &self.set;
+        let mut current = deref_node(this.root);
+        loop {
+            match current.keys.binary_search_by(|k| k.key.cmp(key)) {
+                Ok(idx) => return Some(&current.keys[idx].value),
+                Err(idx) => {
+                    if current.is_leaf() {
+                        return None;
+                    }
+                    current = deref_node(current.children[idx]);
+                    continue;
+                }
+            }
+        }
+    }
+
+    #[must_use]
+    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+        let this = &mut self.set;
+        let mut current = deref_node_mut(this.root);
+        loop {
+            match current.keys.binary_search_by(|k| k.key.cmp(key)) {
+                Ok(idx) => return Some(&mut current.keys[idx].value),
+                Err(idx) => {
+                    if current.is_leaf() {
+                        return None;
+                    }
+                    current = deref_node_mut(current.children[idx]);
+                    continue;
+                }
+            }
+        }
+    }
+
+    #[must_use]
     pub fn contains_key(&self, key: &K) -> bool {
         let mut current = deref_node(self.set.root);
         loop {
