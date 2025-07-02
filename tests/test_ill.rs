@@ -36,6 +36,8 @@ fn test_ill_basic_derive() {
         let stable = unsafe { StableRefMut::from_ref_to_raw(&mut datastore[i]) };
         list.push_back(stable);
     }
+    assert_eq!(datastore.len(), 22);
+    assert_eq!(datastore.iter().len(), 8);
 
     trace!("{}", list.debug_nodes());
     for i in 0..22 {
@@ -49,12 +51,14 @@ fn test_ill_move_elements() {
     let mut datastore = Vec::with_capacity(0);
     for i in 0..8 {
         datastore.push(Bla::new(i as f32));
-        trace!("adding {:?} to list", datastore.last_mut().unwrap());
         let p = pin!(*datastore.last_mut().unwrap());
+        trace!("adding {:?} to list", p);
         let stable: StableRefMut<'_, Bla> = StableRefMut::from_ref(p);
         list.push_back(stable);
         trace!("{}", list.debug_nodes());
     }
+    assert_eq!(datastore.len(), 8);
+    assert_eq!(datastore.iter().len(), 8);
     trace!("{}", list.debug_nodes());
 }
 
@@ -64,13 +68,15 @@ fn test_ill_drop_elements() {
     let mut datastore = Vec::with_capacity(0);
     for i in 0..8 {
         datastore.push(Bla::new(i as f32));
-        trace!("adding {:?} to list", datastore.last_mut().unwrap());
         let p = pin!(*datastore.last_mut().unwrap());
+        trace!("adding {:?} to list", p);
         let stable = StableRefMut::from_ref(p);
         list.push_back(stable);
         trace!("{}", list.debug_nodes());
     }
+    assert_eq!(datastore.len(), 8);
+    assert_eq!(datastore.iter().len(), 8);
     datastore.clear();
-    assert!(list.is_empty()); // without explicit clear
     trace!("{}", list.debug_nodes());
+    assert!(list.is_empty()); // without explicit clear
 }
