@@ -19,16 +19,16 @@ pub(crate) type OpNodePtr<T> = Option<NodePtr<T>>;
 #[derive(Clone)]
 pub struct BTreeSet<T: Ord + Clone> {
     root: NodePtr<T>,
-    props: BTreeProperties,
+    pub(crate) props: BTreeProperties,
 }
 
 #[derive(Clone, Debug, Copy)]
 pub struct BTreeProperties {
-    degree: usize,
-    max_keys: usize,
-    min_keys: usize,
-    mid_key_index: usize,
-    len: usize,
+    pub(crate) degree: usize,
+    pub(crate) max_keys: usize,
+    pub(crate) min_keys: usize,
+    pub(crate) mid_key_index: usize,
+    pub(crate) len: usize,
 }
 
 impl<T: Ord> Node<T> {
