@@ -13,7 +13,8 @@ keywords = ["datastructures"]
 
 
 [dependencies]
-datastructurs-macros = {path = "./crates/datastructurs-macros/"}
+datastructurs-macros = { path = "./crates/datastructurs-macros/" }
+rand.workspace = true
 
 [workspace]
 members = ["crates/btree_cinema", ".", "crates/datastructurs-macros"]
@@ -21,3 +22,4 @@ default-members = ["."]
 
 [workspace.dependencies]
 datastructurs = { path = "." }
+rand = "0.9.1"
