@@ -43,7 +43,7 @@ fn render(tree: &BTreeSet<Item>, fill: f64, tick: usize, action: Action) {
     println!("fill: {fill:.02}");
     println!("len: {}", tree.len());
     println!("nodes: {}", tree.node_count());
-    println!("action: {:?}", action);
+    println!("action: {action:?}");
     println!("tick: {tick}");
     print!("branching factor: {}", tree.branching_factor());
 
@@ -51,7 +51,7 @@ fn render(tree: &BTreeSet<Item>, fill: f64, tick: usize, action: Action) {
 }
 
 fn print_usage(program: &str, opts: Options) {
-    let brief = format!("Usage: {} [options]", program);
+    let brief = format!("Usage: {program} [options]");
     print!("{}", opts.usage(&brief));
 }
 

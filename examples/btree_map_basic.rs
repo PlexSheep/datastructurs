@@ -118,9 +118,9 @@ fn main() {
         bm.insert(sid, sheep);
     }
 
-    println!("Layout: {:#?}", bm);
+    println!("Layout: {bm:#?}");
 
-    for i in (0..sheeps) {
+    for i in 0..sheeps {
         let sid = &sheep_ids[i];
         println!("\"{sid}\": {}", bm.get(sid).unwrap())
     }

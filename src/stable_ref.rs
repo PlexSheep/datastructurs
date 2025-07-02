@@ -96,11 +96,7 @@
 // moves in the memory
 #![allow(clippy::borrowed_box)]
 
-use std::{
-    ops::{Deref, DerefMut},
-    pin::Pin,
-    ptr::NonNull,
-};
+use std::{pin::Pin, ptr::NonNull};
 
 /// A reference that guarantees the pointed-to value has a stable memory address.
 ///

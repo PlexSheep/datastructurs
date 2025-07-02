@@ -17,7 +17,7 @@ fn test_btree_set_insert_contains_remove_in_order() {
     }
 
     for &value in data {
-        assert!(tree.contains(&value), "Tree should contain {}", value);
+        assert!(tree.contains(&value), "Tree should contain {value}");
     }
 
     assert!(!tree.contains(&999), "Tree should not contain 999");
@@ -43,11 +43,11 @@ fn test_btree_set_insert_contains_remove_out_of_order() {
     }
 
     for &value in data.iter().skip(1).step_by(2) {
-        assert!(tree.contains(&value), "Tree should contain {}", value);
+        assert!(tree.contains(&value), "Tree should contain {value}");
     }
 
     for &value in data.iter().step_by(2) {
-        assert!(!tree.contains(&value), "Tree should not contain {}", value);
+        assert!(!tree.contains(&value), "Tree should not contain {value}");
     }
 
     assert!(!tree.contains(&999), "Tree should not contain 999");
