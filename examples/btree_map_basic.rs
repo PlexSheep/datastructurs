@@ -35,6 +35,7 @@ const SHEEP_WORDS: &[&str] = &[
     "Määhää",
     "Mähä",
     "Mäha",
+    "Lamm",
 ];
 
 #[derive(Clone, Debug, Copy)]
@@ -106,7 +107,7 @@ fn sheepspeech(n: usize) -> String {
 }
 
 fn main() {
-    let sheeps = 2000;
+    let sheeps = 30;
 
     let mut bm = BTreeMap::new(DEFAULT_BRANCH_FACTOR);
     let mut sheep_ids: Vec<String> = Vec::new();
