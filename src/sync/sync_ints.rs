@@ -4,12 +4,19 @@ use crate::sync::SyncBox;
 
 macro_rules! atomic_syncbox_int {
     ($name:ident, $primitive:ty) => {
-        #[derive(Debug, Hash, Clone)]
+        #[derive(Debug, Clone, Default)]
         pub struct $name {
             inner: SyncBox<$primitive>,
         }
 
         impl $name {
+            #[inline(always)]
+            pub fn new(value: $primitive) -> Self {
+                Self {
+                    inner: SyncBox::new(value),
+                }
+            }
+
             #[inline(always)]
             pub fn inc(&self) {
                 unsafe {
@@ -35,11 +42,13 @@ macro_rules! atomic_syncbox_int {
 }
 
 atomic_syncbox_int!(SyncU128, u128);
+atomic_syncbox_int!(SyncUsize, usize);
 atomic_syncbox_int!(SyncU64, u64);
 atomic_syncbox_int!(SyncU32, u32);
 atomic_syncbox_int!(SyncU16, u16);
 atomic_syncbox_int!(SyncU8, u8);
 atomic_syncbox_int!(SyncI128, i128);
+atomic_syncbox_int!(SyncIsize, isize);
 atomic_syncbox_int!(SyncI64, i64);
 atomic_syncbox_int!(SyncI32, i32);
 atomic_syncbox_int!(SyncI16, i16);
