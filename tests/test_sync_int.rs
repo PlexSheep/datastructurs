@@ -13,6 +13,7 @@ fn test_sync_int_st() {
     assert_eq!(*idx.get(), 1337);
     idx.set(19);
     assert_eq!(*idx.get(), 19);
+    assert_eq!(idx.val(), 19);
 }
 
 #[test]

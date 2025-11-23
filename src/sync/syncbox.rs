@@ -53,6 +53,13 @@ impl<T: Sized + Send + Sync> SyncBox<T> {
     }
 }
 
+impl<T: Copy + Sized + Send + Sync> SyncBox<T> {
+    #[inline(always)]
+    pub fn val(&self) -> T {
+        unsafe { *self.pointer() }
+    }
+}
+
 impl<T: Sized + Send + Sync + Default> Default for SyncBox<T> {
     fn default() -> Self {
         Self::new(T::default())
