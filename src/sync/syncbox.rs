@@ -1,4 +1,4 @@
-use std::{cell::UnsafeCell, marker::PhantomData};
+use std::marker::PhantomData;
 
 /// Allocates a value in a Box and makes it available with a raw pointer dereference across threads
 ///

@@ -400,7 +400,7 @@ impl<'a, T> StableRefMut<'a, T> {
     /// The user must take measures to ensure that no race condition arises
     /// from multiple mutable references existing to the same value.
     #[inline]
-    #[allow(elided_named_lifetimes)]
+    #[allow(mismatched_lifetime_syntaxes)]
     pub unsafe fn clone(&'a self) -> StableRefMut<'_, T> {
         match self {
             // HACK: converting the box to a boxref might be a memory leak

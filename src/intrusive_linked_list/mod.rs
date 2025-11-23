@@ -242,7 +242,7 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
     }
 
     #[must_use]
-    pub fn iter(&self) -> Iter<A, T> {
+    pub fn iter(&self) -> Iter<'_, A, T> {
         Iter {
             current: self.head,
             remaining: self.len,
@@ -251,7 +251,7 @@ impl<T, A: IntrusiveListAccessor<T>> IntrusiveList<T, A> {
     }
 
     #[must_use]
-    pub fn iter_mut(&mut self) -> IterMut<A, T> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, A, T> {
         IterMut {
             current: self.head,
             remaining: self.len,

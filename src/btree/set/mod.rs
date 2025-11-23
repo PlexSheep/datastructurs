@@ -291,7 +291,7 @@ impl<T: Ord + Clone> BTreeSet<T> {
     }
 
     #[must_use]
-    pub fn iter(&self) -> BTreeIter<T> {
+    pub fn iter(&self) -> BTreeIter<'_, T> {
         BTreeIter::new(&self.root)
     }
 

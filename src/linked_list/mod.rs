@@ -257,7 +257,7 @@ impl<T> LinkedList<T> {
     }
 
     #[must_use]
-    pub fn iter(&self) -> Iter<T> {
+    pub fn iter(&self) -> Iter<'_, T> {
         Iter {
             current: self.head,
             remaining: self.len,
@@ -266,7 +266,7 @@ impl<T> LinkedList<T> {
     }
 
     #[must_use]
-    pub fn iter_mut(&mut self) -> IterMut<T> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
         IterMut {
             current: self.head,
             remaining: self.len,

@@ -164,7 +164,7 @@ impl<T> Vec<T> {
         self.buf.ptr.as_ptr()
     }
 
-    pub fn drain_all(&mut self) -> Drain<T> {
+    pub fn drain_all(&mut self) -> Drain<'_, T> {
         let iter = unsafe { RawIter::new(self) };
 
         self.used = 0;
