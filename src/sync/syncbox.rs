@@ -14,6 +14,7 @@ pub struct SyncBox<T: Sized + Send + Sync> {
 
 #[derive(Debug)]
 struct SyncBoxInner<T: Sized + Send + Sync> {
+    #[allow(unused)]
     value: T,
     refs: u32,
 }
