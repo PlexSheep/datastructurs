@@ -1,4 +1,4 @@
-use crate::trace;
+use crate::trace_current_function;
 
 use super::*;
 
@@ -9,7 +9,7 @@ fn test_ll_push_front() {
         ll.push_front(i);
     }
     for i in 0..12 {
-        trace!("i={i}\n{}", ll.debug_nodes());
+        trace_current_function!("i={i}\n{}", ll.debug_nodes());
         assert!(ll.contains(&i))
     }
 }
@@ -21,7 +21,7 @@ fn test_ll_push_back() {
         ll.push_back(i);
     }
     for i in 0..12 {
-        trace!("i={i}\n{}", ll.debug_nodes());
+        trace_current_function!("i={i}\n{}", ll.debug_nodes());
         assert!(ll.contains(&i))
     }
 }
@@ -36,7 +36,7 @@ fn test_ll_push_pop_front() {
         assert!(ll.contains(&i))
     }
     for i in 0..12 {
-        trace!("i={i}\n{}", ll.debug_nodes());
+        trace_current_function!("i={i}\n{}", ll.debug_nodes());
         ll.pop_front();
     }
     assert!(ll.is_empty())
@@ -52,7 +52,7 @@ fn test_ll_push_pop_back() {
         assert!(ll.contains(&i))
     }
     for i in 0..12 {
-        trace!("i={i}\n{}", ll.debug_nodes());
+        trace_current_function!("i={i}\n{}", ll.debug_nodes());
         ll.pop_back();
     }
     assert!(ll.is_empty())
@@ -73,14 +73,14 @@ fn test_ll_ins_multiple() {
 
     ll.push_front(1);
     ll.push_front(2);
-    trace!("{ll:?}");
-    trace!("{}", ll.debug_nodes());
+    trace_current_function!("{ll:?}");
+    trace_current_function!("{}", ll.debug_nodes());
     ll.push_front(3);
-    trace!("{ll:?}");
-    trace!("{}", ll.debug_nodes());
+    trace_current_function!("{ll:?}");
+    trace_current_function!("{}", ll.debug_nodes());
     ll.push_front(4);
-    trace!("{ll:?}");
-    trace!("{}", ll.debug_nodes());
+    trace_current_function!("{ll:?}");
+    trace_current_function!("{}", ll.debug_nodes());
 
     assert!(ll.contains(&4));
     assert!(ll.contains(&3));
@@ -95,7 +95,7 @@ fn test_ll_push_many() {
         ll.push_front(i);
     }
     for i in 0..10_000 {
-        trace!("i={i}");
+        trace_current_function!("i={i}");
         assert!(ll.contains(&i))
     }
 }
@@ -107,7 +107,7 @@ fn test_ll_iter() {
         ll.push_back(i);
     }
     for i in ll.iter() {
-        trace!("i in ll: {i}")
+        trace_current_function!("i in ll: {i}")
     }
     for (li, i) in ll.iter().zip(0..10) {
         assert_eq!(*li, i)
@@ -124,7 +124,7 @@ fn test_ll_iter_mut() {
         *i += 100;
     }
     for i in ll.iter() {
-        trace!("i in ll: {i}")
+        trace_current_function!("i in ll: {i}")
     }
     for (li, i) in ll.iter().zip(0..10) {
         assert_eq!(*li, 100 + i)
@@ -141,7 +141,7 @@ fn test_ll_iter_into() {
         *i += 100;
     }
     for i in ll.iter() {
-        trace!("i in ll: {i}")
+        trace_current_function!("i in ll: {i}")
     }
     for (li, i) in ll.into_iter().zip(0..10) {
         assert_eq!(li, 100 + i)

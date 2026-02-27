@@ -13,12 +13,11 @@ keywords = ["datastructures"]
 
 
 [dependencies]
-datastructurs-macros = { path = "./crates/datastructurs-macros/" }
 rand.workspace = true
 
 [workspace]
-members = ["crates/btree_cinema", ".", "crates/datastructurs-macros"]
-default-members = ["."]
+members = ["crates/btree_cinema", "."]
+default-members = [".","crates/btree_cinema"]
 
 [workspace.dependencies]
 datastructurs = { path = "." }

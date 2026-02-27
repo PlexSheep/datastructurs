@@ -3,7 +3,7 @@ use std::{
     ptr::NonNull,
 };
 
-use crate::trace;
+use crate::trace_current_function;
 
 #[derive(Clone)]
 pub(crate) struct RawVec<T> {
@@ -22,9 +22,11 @@ impl<T> RawVec<T> {
     // See rustonomicon, chapter 9.2
     pub(crate) fn grow_by(&mut self, added_capacity: usize) {
         let new_cap = self.capacity + added_capacity;
-        trace!(
+        trace_current_function!(
             "growing raw_vec at {:?} from {} to {}",
-            self.ptr, self.capacity, new_cap
+            self.ptr,
+            self.capacity,
+            new_cap
         );
         // `Layout::array` checks that the number of bytes is <= usize::MAX,
         // but this is redundant since old_layout.size() <= isize::MAX,
@@ -50,9 +52,10 @@ impl<T> RawVec<T> {
             None => alloc::handle_alloc_error(new_layout),
         };
         self.capacity = new_cap;
-        trace!(
+        trace_current_function!(
             "growing raw_vec finished, now at {:?} with capacity {}",
-            self.ptr, self.capacity
+            self.ptr,
+            self.capacity
         );
     }
 

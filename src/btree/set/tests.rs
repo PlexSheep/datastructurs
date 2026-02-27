@@ -1,4 +1,4 @@
-use crate::{btree::DEFAULT_BRANCH_FACTOR, trace};
+use crate::{btree::DEFAULT_BRANCH_FACTOR, trace_current_function};
 
 use super::*;
 
@@ -134,8 +134,8 @@ fn test_btree_set_stress() {
     for d in range.clone() {
         tree.insert(d);
     }
-    trace!("Tree height: {}", tree.height());
-    trace!("Tree len: {}", tree.len());
+    trace_current_function!("Tree height: {}", tree.height());
+    trace_current_function!("Tree len: {}", tree.len());
 
     for key in range.clone() {
         assert!(tree.contains(&key))
@@ -348,8 +348,8 @@ fn test_btree_set_height_characteristics() {
     assert!(height > 0);
     assert!(height < 10); // Should be quite shallow with branch factor 100
 
-    trace!("Tree with 1000 elements has height: {}", height);
-    trace!("Tree has {} nodes", tree.node_count());
+    trace_current_function!("Tree with 1000 elements has height: {}", height);
+    trace_current_function!("Tree has {} nodes", tree.node_count());
 }
 
 #[test]
@@ -410,7 +410,7 @@ fn test_btree_set_different_branch_factors() {
         let collected: std::vec::Vec<_> = tree.iter().cloned().collect();
         assert_eq!(collected, data);
 
-        trace!(
+        trace_current_function!(
             "Branch factor {}: height = {}, nodes = {}",
             branch_factor,
             tree.height(),
@@ -464,7 +464,7 @@ fn test_btree_set_memory_intensive() {
     let expected = (0..100).collect::<std::vec::Vec<_>>();
     assert_eq!(first_100, expected);
 
-    trace!(
+    trace_current_function!(
         "Large tree stats: height = {}, nodes = {}",
         tree.height(),
         tree.node_count()
